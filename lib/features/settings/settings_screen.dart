@@ -269,6 +269,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: _inputDeco('비밀번호 (6자 이상)'),
                   validator: (v) => (v != null && v.length >= 6) ? null : '6자 이상 입력하세요',
                 ),
+                if (!isSignUp) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final email = emailCtrl.text.trim();
+                        if (!email.contains('@')) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('먼저 이메일을 입력해주세요')));
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        final ok = await _backend.auth.sendPasswordReset(email);
+                        if (mounted) setState(() {
+                          _message = ok
+                              ? '$email 으로 비밀번호 재설정 이메일을 보냈습니다'
+                              : '이메일 발송에 실패했습니다';
+                          _messageIsError = !ok;
+                        });
+                      },
+                      child: const Text('비밀번호를 잊으셨나요?',
+                        style: TextStyle(
+                          fontSize: 11, color: AppColors.accent,
+                          decoration: TextDecoration.underline,
+                        )),
+                    ),
+                  ),
+                ],
               ]),
             ),
             const SizedBox(height: 16),

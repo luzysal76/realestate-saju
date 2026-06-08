@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
@@ -187,20 +188,152 @@ class TimingScreen extends StatelessWidget {
 
   Widget _buildYearlyChart() {
     final seWunList = result.seWunList;
+    final currentYear = DateTime.now().year;
+    final nowIdx = seWunList.indexWhere((s) => s.year == currentYear);
 
     return TraditionalCard(
       doubleBorder: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const KoreanSectionTitle(
-          title: '세운(歲運) 연도별 분석',
-          subtitle: '일간 기준 십성·지지 관계 종합',
+          title: '세운(歲運) 투자지수 차트',
+          subtitle: '연도별 부동산 운세 점수 (0~100)',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+
+        // ─── fl_chart 막대 그래프 ───────────────────
+        SizedBox(
+          height: 180,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: 100,
+              minY: 0,
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => AppColors.cardBg2,
+                  getTooltipItem: (group, groupIdx, rod, rodIdx) {
+                    final sw = seWunList[groupIdx];
+                    return BarTooltipItem(
+                      '${sw.year}\n${sw.ganJiStr}\n${rod.toY.toInt()}점',
+                      TextStyle(
+                        fontFamily: 'NotoSerifKR',
+                        fontSize: 10,
+                        color: getScoreColor(rod.toY.toInt()),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              titlesData: FlTitlesData(
+                show: true,
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28,
+                    interval: 25,
+                    getTitlesWidget: (val, _) => Text(
+                      '${val.toInt()}',
+                      style: const TextStyle(
+                        fontSize: 8, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28,
+                    getTitlesWidget: (val, _) {
+                      final idx = val.toInt();
+                      if (idx < 0 || idx >= seWunList.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final sw = seWunList[idx];
+                      final isNow = sw.year == currentYear;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '\'${(sw.year % 100).toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: isNow ? FontWeight.bold : FontWeight.normal,
+                            color: isNow ? AppColors.accent : AppColors.textSecondary,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: 25,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: AppColors.divider.withOpacity(0.4),
+                  strokeWidth: 0.5,
+                ),
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: Border(
+                  bottom: BorderSide(color: AppColors.divider.withOpacity(0.5), width: 0.5),
+                  left: BorderSide(color: AppColors.divider.withOpacity(0.5), width: 0.5),
+                ),
+              ),
+              barGroups: seWunList.asMap().entries.map((e) {
+                final idx = e.key;
+                final sw = e.value;
+                final isNow = sw.year == currentYear;
+                final scoreColor = getScoreColor(sw.investmentScore);
+                return BarChartGroupData(
+                  x: idx,
+                  barRods: [
+                    BarChartRodData(
+                      toY: sw.investmentScore.toDouble(),
+                      color: isNow ? AppColors.accent : scoreColor.withOpacity(0.75),
+                      width: isNow ? 16 : 12,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+                      backDrawRodData: BackgroundBarChartRodData(
+                        show: true,
+                        toY: 100,
+                        color: AppColors.surface.withOpacity(0.3),
+                      ),
+                    ),
+                  ],
+                  showingTooltipIndicators: isNow ? [0] : [],
+                );
+              }).toList(),
+            ),
+            swapAnimationDuration: const Duration(milliseconds: 600),
+            swapAnimationCurve: Curves.easeInOut,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+        // 범례
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          _chartLegend('대길(80+)', const Color(0xFFCC3300)),
+          const SizedBox(width: 12),
+          _chartLegend('길(65+)', const Color(0xFFD4A017)),
+          const SizedBox(width: 12),
+          _chartLegend('평길(50+)', const Color(0xFF4E9E6B)),
+          const SizedBox(width: 12),
+          _chartLegend('보통/주의', AppColors.textSecondary),
+        ]),
+
+        const SizedBox(height: 14),
+        Container(height: 0.5, color: AppColors.divider.withOpacity(0.5)),
+        const SizedBox(height: 10),
+
+        // ─── 간략 리스트 ────────────────────────────
         ...seWunList.map((sw) {
           final score = sw.investmentScore;
           final color = getScoreColor(score);
           final oeColor = AppColors.getOehaengColor(sw.oehaeng);
-          final isNow = sw.year == DateTime.now().year;
+          final isNow = sw.year == currentYear;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
             child: Row(children: [
@@ -208,8 +341,7 @@ class TimingScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('${sw.year}', style: TextStyle(
-                    fontFamily: 'NotoSerifKR',
-                    fontSize: 12,
+                    fontFamily: 'NotoSerifKR', fontSize: 12,
                     color: isNow ? AppColors.accent : AppColors.textSecondary,
                     fontWeight: isNow ? FontWeight.bold : FontWeight.normal,
                   )),
@@ -220,7 +352,7 @@ class TimingScreen extends StatelessWidget {
               Expanded(child: KoreanProgressBar(
                 value: score / 100,
                 color: isNow ? AppColors.accent : color,
-                height: isNow ? 12 : 8,
+                height: isNow ? 10 : 7,
               )),
               const SizedBox(width: 6),
               SizedBox(width: 28, child: Text('$score', style: TextStyle(
@@ -233,6 +365,13 @@ class TimingScreen extends StatelessWidget {
       ]),
     );
   }
+
+  Widget _chartLegend(String label, Color color) => Row(children: [
+    Container(width: 8, height: 8,
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+    const SizedBox(width: 4),
+    Text(label, style: const TextStyle(fontSize: 8, color: AppColors.textSecondary)),
+  ]);
 
   // ─── 대운 전략 ──────────────────────────────────
 

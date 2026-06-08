@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
@@ -715,35 +716,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return e[ss] ?? '✨';
   }
 
-  // ─── 오행 바 ────────────────────────────────────
+  // ─── 오행 분포 ───────────────────────────────────
 
   Widget _buildOehaengBar() {
     final scores = _result.oehaengScore;
-    final maxScore = scores.values.reduce((a, b) => a > b ? a : b).toDouble();
+    final oeOrder = ['목', '화', '토', '금', '수'];
+    final maxScore = scores.values.fold(0, (a, b) => a > b ? a : b);
+    final mainOe = _result.mainOehaeng;
+    final mainColor = AppColors.getOehaengColor(mainOe);
 
     return TraditionalCard(
       doubleBorder: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const KoreanSectionTitle(title: '오행 분포 (五行)'),
         const SizedBox(height: 12),
-        ...scores.entries.map((e) {
-          final color = AppColors.getOehaengColor(e.key);
-          final ratio = maxScore > 0 ? e.value / maxScore : 0.0;
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              OehaengBadge(e.key),
-              const SizedBox(width: 8),
-              Expanded(child: KoreanProgressBar(value: ratio, color: color)),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 24,
-                child: Text('${e.value}', style: TextStyle(
-                  fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          // ─── 레이더 차트 ─────────────────────────
+          SizedBox(
+            width: 130, height: 130,
+            child: RadarChart(
+              RadarChartData(
+                radarShape: RadarShape.polygon,
+                dataSets: [
+                  RadarDataSet(
+                    dataEntries: oeOrder.map((oe) =>
+                      RadarEntry(value: (scores[oe] ?? 0).toDouble())).toList(),
+                    fillColor: mainColor.withOpacity(0.25),
+                    borderColor: mainColor,
+                    borderWidth: 1.5,
+                    entryRadius: 2,
+                  ),
+                ],
+                radarBackgroundColor: Colors.transparent,
+                borderData: FlBorderData(show: false),
+                radarBorderData: BorderSide(
+                  color: AppColors.divider.withOpacity(0.5), width: 0.5),
+                tickCount: 2,
+                ticksTextStyle: const TextStyle(fontSize: 0, color: Colors.transparent),
+                tickBorderData: BorderSide(
+                  color: AppColors.divider.withOpacity(0.3), width: 0.5),
+                gridBorderData: BorderSide(
+                  color: AppColors.divider.withOpacity(0.3), width: 0.5),
+                getTitle: (idx, angle) {
+                  const oeHanja = ['木', '火', '土', '金', '水'];
+                  const oeKor   = ['목',  '화',  '토',  '금',  '수'];
+                  final oe = oeKor[idx];
+                  final color = AppColors.getOehaengColor(oe);
+                  return RadarChartTitle(
+                    text: oeHanja[idx],
+                    angle: 0,
+                    positionPercentageOffset: 0.1,
+                  );
+                },
+                titleTextStyle: const TextStyle(
+                  fontFamily: 'NotoSerifKR',
+                  fontSize: 10, color: AppColors.textSecondary),
+                titlePositionPercentageOffset: 0.12,
               ),
-            ]),
-          );
-        }),
+            ),
+          ),
+
+          const SizedBox(width: 14),
+
+          // ─── 바 리스트 ───────────────────────────
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: oeOrder.map((oe) {
+              final val = scores[oe] ?? 0;
+              final ratio = maxScore > 0 ? val / maxScore : 0.0;
+              final color = AppColors.getOehaengColor(oe);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(children: [
+                  OehaengBadge(oe),
+                  const SizedBox(width: 6),
+                  Expanded(child: KoreanProgressBar(value: ratio, color: color, height: 6)),
+                  const SizedBox(width: 6),
+                  SizedBox(width: 18, child: Text('$val',
+                    style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold))),
+                ]),
+              );
+            }).toList(),
+          )),
+        ]),
       ]),
     ).animate(delay: 230.ms).fadeIn().slideY(begin: 0.1);
   }
