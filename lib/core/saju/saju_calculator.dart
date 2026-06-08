@@ -134,8 +134,11 @@ class SajuCalculator {
   static Map<String, String> dayToGanJi(DateTime date) {
     final base = DateTime(2000, 1, 1);
     final diff = date.difference(base).inDays;
-    final ci = diff % 10;
-    final ji = (diff + 4) % 12; // 2000-01-01 = 갑진
+    // 원광만세력 기준: 2000-01-01 = 戊午(무오)
+    // 검증: 1976-01-02(diff=-8765) → 癸丑 ✓
+    //       (-8761 % 10 = 9 = 癸), (-8759 % 12 = 1 = 丑)
+    final ci = (diff + 4) % 10;  // 戊 = 4
+    final ji = (diff + 6) % 12;  // 午 = 6
     return _ganjiMap(ci, ji);
   }
 
