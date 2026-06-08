@@ -207,9 +207,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Container(height: 0.5, color: AppColors.divider.withOpacity(0.5)),
         _tile(
           icon: '🔒', title: '개인정보처리방침',
-          sub: 'changemindsupport.surge.sh/privacy.html',
+          sub: 'luzysal76.github.io/realestate-saju',
           onTap: () => launchUrl(
-            Uri.parse('https://changemindsupport.surge.sh/privacy.html'),
+            Uri.parse('https://luzysal76.github.io/realestate-saju/docs/privacy.html'),
             mode: LaunchMode.externalApplication,
           ),
         ),
