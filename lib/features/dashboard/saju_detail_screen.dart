@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
 import '../../shared/models/saju_profile.dart';
+import 'shinsal_card.dart';
 
 class SajuDetailScreen extends StatelessWidget {
   final SajuResult result;
@@ -13,7 +14,7 @@ class SajuDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         backgroundColor: AppColors.surface,
         appBar: AppBar(
@@ -32,6 +33,7 @@ class SajuDetailScreen extends StatelessWidget {
               Tab(text: '十星'),
               Tab(text: '大運'),
               Tab(text: '歲運'),
+              Tab(text: '神煞'),
             ],
           ),
         ),
@@ -39,6 +41,7 @@ class SajuDetailScreen extends StatelessWidget {
           _SipSeongTab(result: result),
           _DaeWunTab(result: result, profile: profile),
           _SeWunTab(result: result),
+          ShinSalDetailTab(shinSal: result.shinSalResult),
         ]),
       ),
     );

@@ -65,8 +65,18 @@ class _InputScreenState extends State<InputScreen> {
     );
 
     final box = Hive.box<SajuProfile>('profiles');
-    box.clear();
-    box.add(profile);
+    // 동일한 이름+생년월일 프로필이 이미 있으면 업데이트, 없으면 추가
+    final existingIdx = box.values.toList().indexWhere(
+      (p) => p.name == profile.name &&
+          p.birthDate.year == profile.birthDate.year &&
+          p.birthDate.month == profile.birthDate.month &&
+          p.birthDate.day == profile.birthDate.day,
+    );
+    if (existingIdx >= 0) {
+      box.putAt(existingIdx, profile);
+    } else {
+      box.add(profile);
+    }
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(

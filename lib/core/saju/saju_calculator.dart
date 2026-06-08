@@ -1,4 +1,6 @@
-// 사주 계산 엔진 v2 — 천간/지지/오행/십성/대운/세운 완전 구현
+// 사주 계산 엔진 v2 — 천간/지지/오행/십성/대운/세운/신살 완전 구현
+
+import 'shinsal.dart';
 
 class SajuCalculator {
   // ─── 기본 상수 ───────────────────────────────────────
@@ -98,12 +100,48 @@ class SajuCalculator {
     return _ganjiMap(ci, ji);
   }
 
-  static Map<String, String> monthToGanJi(int year, int month) {
-    final yearCi = (year - 4) % 10;
-    final base = (yearCi % 5) * 2;
-    final ci = (base + month - 1) % 10;
-    final ji = (month + 1) % 12;
-    return _ganjiMap(ci, ji);
+  // ─── 절기 기준일 (양력 평균치 ±1일) ────────────────
+  // [월, 절기일, 해당 지지 인덱스]
+  static const List<List<int>> _jeolgiDates = [
+    [1,  6,  1],  // 소한(小寒)  → 축월(丑月)
+    [2,  4,  2],  // 입춘(立春)  → 인월(寅月)
+    [3,  6,  3],  // 경칩(驚蟄)  → 묘월(卯月)
+    [4,  5,  4],  // 청명(淸明)  → 진월(辰月)
+    [5,  6,  5],  // 입하(立夏)  → 사월(巳月)
+    [6,  6,  6],  // 망종(芒種)  → 오월(午月)
+    [7,  7,  7],  // 소서(小暑)  → 미월(未月)
+    [8,  7,  8],  // 입추(立秋)  → 신월(申月)
+    [9,  8,  9],  // 백로(白露)  → 유월(酉月)
+    [10, 8,  10], // 한로(寒露)  → 술월(戌月)
+    [11, 7,  11], // 입동(立冬)  → 해월(亥月)
+    [12, 7,  0],  // 대설(大雪)  → 자월(子月)
+  ];
+
+  /// 절기 기반 정확한 월주 계산
+  /// [day] 를 전달하면 절기 전후를 구분합니다 (기본값 15 = 월 중순)
+  static Map<String, String> monthToGanJi(int year, int month, [int day = 15]) {
+    // 절기 기준 지지 결정: 위 배열을 앞에서부터 순회하며 조건 충족 시 갱신
+    // 초기값 0 (자월) = 1월 소한 이전, 12월 대설 이전의 경우
+    int jijiIdx = 0;
+    for (final jd in _jeolgiDates) {
+      final jMonth = jd[0], jDay = jd[1], newJi = jd[2];
+      if (month > jMonth || (month == jMonth && day >= jDay)) {
+        jijiIdx = newJi;
+      }
+    }
+
+    // 오호둔법(五虎遁法): 년간 기준 인월(寅月) 천간 결정
+    final yearCgIdx = (year - 4) % 10;
+    // 갑기년→병인, 을경년→무인, 병신년→경인, 정임년→임인, 무계년→갑인
+    const inMonthBaseCg = [2, 4, 6, 8, 0]; // 병, 무, 경, 임, 갑
+    final inBase = inMonthBaseCg[yearCgIdx % 5];
+
+    // 인(2)→묘(3)→...→해(11)→자(0)→축(1) 순서로 오프셋
+    const jijiOrder = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1];
+    final offset = jijiOrder.indexOf(jijiIdx);
+    final cgIdx = (inBase + offset) % 10;
+
+    return _ganjiMap(cgIdx, jijiIdx);
   }
 
   static Map<String, String> dayToGanJi(DateTime date) {
@@ -399,7 +437,7 @@ class SajuCalculator {
     required String gender,
   }) {
     final yearGj = yearToGanJi(birthDate.year);
-    final monthGj = monthToGanJi(birthDate.year, birthDate.month);
+    final monthGj = monthToGanJi(birthDate.year, birthDate.month, birthDate.day);
     final dayGj = dayToGanJi(birthDate);
     final hourGj = hourToGanJi(birthHour, dayGj['cheongan']!);
 
@@ -447,6 +485,14 @@ class SajuCalculator {
       ilji: ilji,
     );
 
+    // 신살 분석
+    final shinSalResult = ShinSalCalculator.calculate(
+      yearJiji: yearGj['jiji']!,
+      dayCheongan: ilgan,
+      dayJiji: ilji,
+      currentYear: currentYear,
+    );
+
     return SajuResult(
       yearGj: yearGj, monthGj: monthGj, dayGj: dayGj, hourGj: hourGj,
       ilgan: ilgan, ilji: ilji,
@@ -458,6 +504,7 @@ class SajuCalculator {
       sipSeongAnalysis: sipSeongAnalysis,
       daeWunList: daeWunList,
       seWunList: seWunList,
+      shinSalResult: shinSalResult,
       gender: gender,
     );
   }
@@ -607,9 +654,10 @@ class SajuResult {
   final String weakOehaeng;
   final Map<String, String> propertyInfo;
   final String luckyDirection;
-  final SipSeongAnalysis sipSeongAnalysis;  // ← 십성
+  final SipSeongAnalysis sipSeongAnalysis;  // 십성
   final List<DaeWun> daeWunList;
-  final List<SeWun> seWunList;              // ← 세운
+  final List<SeWun> seWunList;              // 세운
+  final ShinSalResult shinSalResult;        // 신살
   final String gender;
 
   const SajuResult({
@@ -621,6 +669,7 @@ class SajuResult {
     required this.propertyInfo, required this.luckyDirection,
     required this.sipSeongAnalysis,
     required this.daeWunList, required this.seWunList,
+    required this.shinSalResult,
     required this.gender,
   });
 

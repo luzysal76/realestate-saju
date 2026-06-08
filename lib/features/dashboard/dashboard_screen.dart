@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
@@ -8,9 +10,10 @@ import '../moving/moving_screen.dart';
 import '../direction/direction_screen.dart';
 import '../timing/timing_screen.dart';
 import '../input/input_screen.dart';
+import '../profile/profile_select_screen.dart';
 import '../settings/settings_screen.dart';
 import 'saju_detail_screen.dart';
-import '../../core/services/backend_service.dart';
+import 'shinsal_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -46,6 +49,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               backgroundColor: AppColors.surface,
               flexibleSpace: FlexibleSpaceBar(background: _buildHeader()),
               actions: [
+                // 공유 버튼
+                IconButton(
+                  icon: const Icon(Icons.share_outlined, size: 20),
+                  tooltip: '사주 공유',
+                  onPressed: _shareSaju,
+                ),
+                // 프로필 목록 (여러 프로필이 있을 때)
+                if (Hive.box<SajuProfile>('profiles').length > 1)
+                  IconButton(
+                    icon: const Icon(Icons.people_outline, size: 20),
+                    tooltip: '프로필 선택',
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                          builder: (_) => const ProfileSelectScreen())),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.cloud_outlined, size: 20),
                   tooltip: '설정/백업',
@@ -76,12 +94,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 10),
               _buildSeWunCard(),
               const SizedBox(height: 10),
+              _buildShinSalCard(),
+              const SizedBox(height: 10),
               _buildQuickActions(context),
             ],
           ),
         ),
       ),
     );
+  }
+
+  // ─── 공유 ─────────────────────────────────────────
+
+  void _shareSaju() {
+    final r = _result;
+    final p = widget.profile;
+    final currentYear = DateTime.now().year;
+    final dw = r.currentDaeWun(currentYear, p.birthDate.year);
+    final sw = r.seWunList.isEmpty
+        ? null
+        : r.seWunList.firstWhere(
+            (s) => s.year == currentYear,
+            orElse: () => r.seWunList.first,
+          );
+
+    final buf = StringBuffer();
+    buf.writeln('🏠 부동산 사주 분석 — ${p.name}');
+    buf.writeln('─' * 24);
+    buf.writeln('📅 생년: ${p.birthDate.year}년 ${p.birthDate.month}월 ${p.birthDate.day}일  ${p.gender}성');
+    buf.writeln();
+    buf.writeln('【사주팔자】');
+    buf.writeln('연주: ${r.yearGj['cheongan']}${r.yearGj['jiji']}  '
+        '월주: ${r.monthGj['cheongan']}${r.monthGj['jiji']}  '
+        '일주: ${r.dayGj['cheongan']}${r.dayGj['jiji']}  '
+        '시주: ${r.hourGj['cheongan']}${r.hourGj['jiji']}');
+    buf.writeln('주 오행: ${r.mainOehaeng}  격국: ${r.sipSeongAnalysis.formatDesc}');
+    buf.writeln();
+    buf.writeln('【부동산 궁합】');
+    final info = r.propertyInfo;
+    buf.writeln('유형: ${info['type']}');
+    buf.writeln('타이밍: ${info['timing']}');
+    buf.writeln('길한 방향: ${r.luckyDirection}');
+    buf.writeln();
+    if (dw != null) {
+      buf.writeln('【현재 대운 (${dw.age}~${dw.endAge}세)】');
+      buf.writeln('${dw.cheongan}${dw.jiji} — ${dw.sipSeong.name}  투자지수: ${dw.investmentScore}');
+      buf.writeln(dw.propertyTip);
+      buf.writeln();
+    }
+    if (sw != null) {
+      buf.writeln('【$currentYear년 세운】');
+      buf.writeln('${sw.ganJiStr} — ${sw.sipSeong.name}  투자지수: ${sw.investmentScore}');
+      buf.writeln(sw.buyOrSell);
+      buf.writeln();
+    }
+    if (r.shinSalResult.isSamjaeYear) {
+      buf.writeln('⚠️ 올해 삼재(三災)입니다. 큰 거래는 신중히.');
+    }
+    if (r.shinSalResult.gongmang.isNotEmpty) {
+      buf.writeln('🕳 공망: ${r.shinSalResult.gongmang.join("·")}');
+    }
+    buf.writeln();
+    buf.writeln('📱 부동산 사주 앱에서 생성된 분석 결과입니다.');
+
+    Share.share(buf.toString(), subject: '${p.name}님의 부동산 사주 분석');
   }
 
   // ─── 헤더 ─────────────────────────────────────────
@@ -529,6 +605,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
       ]),
     ).animate(delay: 440.ms).fadeIn().slideY(begin: 0.1);
+  }
+
+  // ─── 신살 카드 ──────────────────────────────────
+
+  Widget _buildShinSalCard() {
+    return ShinSalCard(shinSal: _result.shinSalResult)
+        .animate(delay: 500.ms).fadeIn().slideY(begin: 0.1);
   }
 
   // ─── 빠른 메뉴 ──────────────────────────────────

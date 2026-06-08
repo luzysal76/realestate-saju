@@ -6,6 +6,7 @@ import '../../core/widgets/korean_decorations.dart';
 import '../../shared/models/saju_profile.dart';
 import '../input/input_screen.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../profile/profile_select_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,13 +38,18 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 2800));
     if (!mounted) return;
     final box = Hive.box<SajuProfile>('profiles');
-    if (box.isNotEmpty) {
+    if (box.isEmpty) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const InputScreen()),
+      );
+    } else if (box.length == 1) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => DashboardScreen(profile: box.getAt(0)!)),
       );
     } else {
+      // 여러 프로필이 있을 때 선택 화면
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const InputScreen()),
+        MaterialPageRoute(builder: (_) => const ProfileSelectScreen()),
       );
     }
   }
