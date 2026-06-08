@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/services/backend_service.dart';
@@ -196,11 +197,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Container(height: 0.5, color: AppColors.divider),
         _tile(icon: '📱', title: '버전', sub: 'v1.0.0'),
         Container(height: 0.5, color: AppColors.divider.withOpacity(0.5)),
-        _tile(icon: '⭐', title: '앱 평가하기', sub: 'Play Store에서 평가'),
+        _tile(
+          icon: '⭐', title: '앱 평가하기', sub: 'Play Store에서 평가',
+          onTap: () => launchUrl(
+            Uri.parse('https://play.google.com/store/apps/details?id=com.changemindsupport.realestate_saju'),
+            mode: LaunchMode.externalApplication,
+          ),
+        ),
         Container(height: 0.5, color: AppColors.divider.withOpacity(0.5)),
         _tile(
           icon: '🔒', title: '개인정보처리방침',
           sub: 'changemindsupport.surge.sh/privacy.html',
+          onTap: () => launchUrl(
+            Uri.parse('https://changemindsupport.surge.sh/privacy.html'),
+            mode: LaunchMode.externalApplication,
+          ),
         ),
       ]),
     ).animate(delay: 160.ms).fadeIn().slideY(begin: 0.1);

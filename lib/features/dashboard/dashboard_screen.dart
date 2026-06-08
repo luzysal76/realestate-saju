@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
+import '../../core/saju/shinsal.dart';
 import '../../shared/models/saju_profile.dart';
 import '../moving/moving_screen.dart';
 import '../direction/direction_screen.dart';
@@ -82,6 +83,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
             children: [
+              _buildTodayCard(),
+              const SizedBox(height: 10),
               _buildSajuPillar(),
               const SizedBox(height: 10),
               _buildSipSeongCard(),
@@ -102,6 +105,323 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  // ─── 오늘 일진 카드 ──────────────────────────────
+
+  Widget _buildTodayCard() {
+    final today = DateTime.now();
+    final todayGj = SajuCalculator.dayToGanJi(today);
+    final cg = todayGj['cheongan']!;
+    final ji = todayGj['jiji']!;
+    final oe = todayGj['oehaeng_cheongan']!;
+    final color = AppColors.getOehaengColor(oe);
+
+    // 일간 기준 오늘 십성
+    final ss = SajuCalculator.calcSipSeong(_result.ilgan, cg);
+
+    // 오늘 공망 여부
+    final gongmang = _result.shinSalResult.gongmang;
+    final isGongmang = gongmang.contains(ji);
+
+    // 일지 합충 체크
+    final jijiRelation = _getJijiRelation(_result.ilji, ji);
+
+    // 오늘 점수
+    final verdict = _getTodayVerdict(ss.name, jijiRelation, isGongmang);
+
+    return GestureDetector(
+      onTap: () => _showTodayDetail(context, cg, ji, oe, ss, jijiRelation, isGongmang, color),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: verdict.borderColor),
+          boxShadow: [BoxShadow(
+            color: verdict.borderColor.withOpacity(0.2),
+            blurRadius: 8, offset: const Offset(0, 2),
+          )],
+        ),
+        child: Stack(children: [
+          Positioned.fill(child: Container(
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(color: verdict.borderColor.withOpacity(0.15), width: 0.5),
+            ),
+          )),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(children: [
+              // 오늘 날짜 + 간지
+              Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                Text('오늘', style: const TextStyle(
+                  fontSize: 9, color: AppColors.textSecondary, letterSpacing: 1)),
+                const SizedBox(height: 3),
+                Container(
+                  width: 52, height: 56,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: color.withOpacity(0.4)),
+                  ),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(cg, style: TextStyle(
+                      fontFamily: 'NotoSerifKR',
+                      fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+                    Container(height: 0.5, margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      color: color.withOpacity(0.3)),
+                    Text(ji, style: const TextStyle(
+                      fontFamily: 'NotoSerifKR',
+                      fontSize: 18, fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary)),
+                  ]),
+                ),
+                const SizedBox(height: 3),
+                Text('${today.month}/${today.day}', style: const TextStyle(
+                  fontSize: 9, color: AppColors.textSecondary)),
+              ]),
+
+              const SizedBox(width: 14),
+
+              // 운세 내용
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text(verdict.emoji, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 6),
+                    ShaderMask(
+                      shaderCallback: (b) => LinearGradient(
+                        colors: [verdict.borderColor, verdict.borderColor.withOpacity(0.7)],
+                      ).createShader(b),
+                      child: Text(verdict.label, style: const TextStyle(
+                        fontFamily: 'NotoSerifKR',
+                        fontSize: 13, fontWeight: FontWeight.bold,
+                        color: Colors.white, letterSpacing: 0.5,
+                      )),
+                    ),
+                    if (isGongmang) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.hwaColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(2),
+                          border: Border.all(color: AppColors.hwaColor.withOpacity(0.4)),
+                        ),
+                        child: const Text('공망', style: TextStyle(
+                          fontSize: 8, color: AppColors.hwaColor,
+                          fontWeight: FontWeight.bold, letterSpacing: 0.3)),
+                      ),
+                    ],
+                  ]),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    SipSeongBadge(name: ss.name, color: _sipSeongColorFor(ss.name), small: true),
+                    const SizedBox(width: 6),
+                    if (jijiRelation.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(2),
+                          border: Border.all(color: AppColors.divider, width: 0.5),
+                        ),
+                        child: Text('일지와 $jijiRelation', style: const TextStyle(
+                          fontSize: 9, color: AppColors.textSecondary)),
+                      ),
+                  ]),
+                  const SizedBox(height: 6),
+                  Text(verdict.tip, style: const TextStyle(
+                    fontSize: 11, color: AppColors.textPrimary, height: 1.4)),
+                ],
+              )),
+
+              const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+            ]),
+          ),
+        ]),
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.05);
+  }
+
+  String _getJijiRelation(String ilji, String todayJi) {
+    // 주요 합·충 체크 (간략화)
+    const hap = {
+      '자': '축', '축': '자', '인': '해', '해': '인',
+      '묘': '술', '술': '묘', '진': '유', '유': '진',
+      '사': '신', '신': '사', '오': '미', '미': '오',
+    };
+    const chung = {
+      '자': '오', '오': '자', '축': '미', '미': '축',
+      '인': '신', '신': '인', '묘': '유', '유': '묘',
+      '진': '술', '술': '진', '사': '해', '해': '사',
+    };
+    if (hap[ilji] == todayJi) return '합(合)';
+    if (chung[ilji] == todayJi) return '충(沖)';
+    return '';
+  }
+
+  _TodayVerdict _getTodayVerdict(String ssName, String jijiRel, bool isGongmang) {
+    if (isGongmang) {
+      return _TodayVerdict(
+        label: '오늘은 공망일 — 큰 결정 보류',
+        emoji: '🕳',
+        tip: '공망(空亡)일입니다. 계약서 서명, 계약금 지급 등 중요한 부동산 결정은 다음날로 미루세요.',
+        borderColor: AppColors.hwaColor.withOpacity(0.6),
+      );
+    }
+    if (jijiRel == '충(沖)') {
+      return _TodayVerdict(
+        label: '충(沖) 주의 — 활동 자제',
+        emoji: '⚡',
+        tip: '오늘 일지가 내 일지와 충(沖)합니다. 새로운 계약이나 큰 결정보다 정보 수집에 집중하세요.',
+        borderColor: const Color(0xFFCC6600).withOpacity(0.7),
+      );
+    }
+    // 십성 기반 판단
+    const goodSs = ['식신', '정재', '정관', '정인'];
+    const badSs = ['겁재', '편관', '상관'];
+    const goodLabel = '부동산 활동에 좋은 날';
+    const badLabel = '신중하게 접근하는 날';
+
+    if (goodSs.contains(ssName)) {
+      final tip = ssName == '정재'
+          ? '재성(財星)이 강한 날. 매물 탐색, 가격 협상에 유리합니다. 계약 진행도 길합니다.'
+          : ssName == '정관'
+          ? '관성(官星)이 강한 날. 권리분석, 등기부 확인 등 법적 절차 진행에 좋습니다.'
+          : ssName == '식신'
+          ? '식신(食神)일. 창의적 발상이 살아나는 날. 새로운 매물 탐색, 임장 활동에 최적입니다.'
+          : '인성(印星)일. 계약서 검토, 정보 분석, 전문가 상담에 적합한 날입니다.';
+      return _TodayVerdict(
+        label: goodLabel,
+        emoji: '🟢',
+        tip: tip,
+        borderColor: AppColors.mokColor.withOpacity(0.7),
+      );
+    }
+    if (badSs.contains(ssName)) {
+      final tip = ssName == '겁재'
+          ? '겁재(劫財)일. 경쟁자 출현 가능성이 높습니다. 중요 결정보다 시장 동향 파악에 집중하세요.'
+          : ssName == '편관'
+          ? '편관(偏官)일. 변수와 돌발 상황이 생길 수 있습니다. 기존 계획 재검토를 권합니다.'
+          : '상관(傷官)일. 언행이 과해질 수 있습니다. 협상 자리에서 과도한 주장을 삼가세요.';
+      return _TodayVerdict(
+        label: badLabel,
+        emoji: '🟡',
+        tip: tip,
+        borderColor: const Color(0xFFB8860B).withOpacity(0.6),
+      );
+    }
+    // 합인 경우
+    if (jijiRel == '합(合)') {
+      return _TodayVerdict(
+        label: '지지합(合) — 좋은 인연의 날',
+        emoji: '🤝',
+        tip: '오늘 지지가 내 일지와 합(合)을 이룹니다. 중개인·파트너와 인연이 잘 맺어지는 날입니다.',
+        borderColor: AppColors.accent.withOpacity(0.6),
+      );
+    }
+    return _TodayVerdict(
+      label: '평범한 날 — 꾸준히 진행',
+      emoji: '⚪',
+      tip: '오늘은 특별한 길흉이 없는 평일입니다. 꾸준한 매물 탐색과 정보 수집을 이어가세요.',
+      borderColor: AppColors.divider,
+    );
+  }
+
+  void _showTodayDetail(BuildContext ctx, String cg, String ji, String oe,
+      SipSeong ss, String jijiRel, bool isGongmang, Color color) {
+    showModalBottomSheet(
+      context: ctx,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+        side: BorderSide(color: AppColors.divider),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          // 핸들
+          Container(width: 36, height: 3,
+            decoration: BoxDecoration(
+              color: AppColors.divider,
+              borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 14),
+          ShaderMask(
+            shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+            child: const Text('오늘 일진 상세',
+              style: TextStyle(fontFamily: 'NotoSerifKR',
+                fontSize: 16, fontWeight: FontWeight.bold,
+                color: Colors.white, letterSpacing: 2)),
+          ),
+          const SizedBox(height: 12),
+          // 간지 + 오행 정보
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Container(
+              width: 60, height: 66,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: color.withOpacity(0.5)),
+              ),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(cg, style: TextStyle(fontFamily: 'NotoSerifKR',
+                  fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+                Container(height: 0.5, margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  color: color.withOpacity(0.3)),
+                Text(ji, style: const TextStyle(fontFamily: 'NotoSerifKR',
+                  fontSize: 22, fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
+              ]),
+            ),
+            const SizedBox(width: 16),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _detailRow('오행', oe, color),
+              _detailRow('일간과 십성', ss.name, _sipSeongColorFor(ss.name)),
+              if (jijiRel.isNotEmpty)
+                _detailRow('일지와의 관계', jijiRel,
+                  jijiRel.contains('합') ? AppColors.mokColor : AppColors.hwaColor),
+              if (isGongmang)
+                _detailRow('공망', '공망일 ⚠️', AppColors.hwaColor),
+            ]),
+          ]),
+          const SizedBox(height: 14),
+          Container(height: 0.5, color: AppColors.divider),
+          const SizedBox(height: 12),
+          Text(ss.shortDesc, textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.5)),
+          const SizedBox(height: 8),
+          Text('지장간: ${JijangGan.get(ji).join(" · ")}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, color: AppColors.textMuted, letterSpacing: 0.5)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value, Color color) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(children: [
+      Text('$label  ', style: const TextStyle(
+        fontSize: 11, color: AppColors.textSecondary)),
+      Text(value, style: TextStyle(
+        fontFamily: 'NotoSerifKR',
+        fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+    ]),
+  );
+
+  Color _sipSeongColorFor(String ss) {
+    const c = {
+      '비견': Color(0xFF5B9BD5), '겁재': Color(0xFF3A7CC2),
+      '식신': Color(0xFF4E9E6B), '상관': Color(0xFF3A8957),
+      '편재': Color(0xFFD4A017), '정재': Color(0xFFC89010),
+      '편관': Color(0xFFCC3300), '정관': Color(0xFFAA2200),
+      '편인': Color(0xFF9B59A8), '정인': Color(0xFF8B4599),
+    };
+    return c[ss] ?? AppColors.textSecondary;
   }
 
   // ─── 공유 ─────────────────────────────────────────
@@ -693,4 +1013,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     const m = {'목': '木', '화': '火', '토': '土', '금': '金', '수': '水'};
     return m[oe] ?? oe;
   }
+}
+
+// ─────────────────────────────────────────────────────
+// 오늘 일진 판단 결과
+// ─────────────────────────────────────────────────────
+class _TodayVerdict {
+  final String label;
+  final String emoji;
+  final String tip;
+  final Color borderColor;
+
+  const _TodayVerdict({
+    required this.label,
+    required this.emoji,
+    required this.tip,
+    required this.borderColor,
+  });
 }

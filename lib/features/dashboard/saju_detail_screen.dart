@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
+import '../../core/saju/shinsal.dart';
 import '../../shared/models/saju_profile.dart';
 import 'shinsal_card.dart';
 
@@ -14,7 +15,7 @@ class SajuDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         backgroundColor: AppColors.surface,
         appBar: AppBar(
@@ -29,7 +30,9 @@ class SajuDetailScreen extends StatelessWidget {
             ),
           ),
           bottom: const TabBar(
+            isScrollable: true,
             tabs: [
+              Tab(text: '八字'),
               Tab(text: '十星'),
               Tab(text: '大運'),
               Tab(text: '歲運'),
@@ -38,6 +41,7 @@ class SajuDetailScreen extends StatelessWidget {
           ),
         ),
         body: TabBarView(children: [
+          _PillarTab(result: result),
           _SipSeongTab(result: result),
           _DaeWunTab(result: result, profile: profile),
           _SeWunTab(result: result),
@@ -45,6 +49,219 @@ class SajuDetailScreen extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 八字 원국 탭
+// ═══════════════════════════════════════════════════════
+class _PillarTab extends StatelessWidget {
+  final SajuResult result;
+  const _PillarTab({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final pillars = [
+      {'label': '연주\n(年柱)', 'gj': result.yearGj, 'sub': '조상·초년'},
+      {'label': '월주\n(月柱)', 'gj': result.monthGj, 'sub': '부모·청년'},
+      {'label': '일주\n(日柱)', 'gj': result.dayGj, 'sub': '자신·배우자'},
+      {'label': '시주\n(時柱)', 'gj': result.hourGj, 'sub': '자녀·말년'},
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 32),
+      children: [
+        // ─── 사주 원국 그리드 ──────────────────────────
+        TraditionalCard(
+          doubleBorder: true,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const KoreanSectionTitle(title: '사주원국 (四柱原局)'),
+            const SizedBox(height: 14),
+
+            // 천간 행
+            Row(children: [
+              const SizedBox(width: 48),
+              ...pillars.map((p) => Expanded(child: _cganCell(p))),
+            ]),
+
+            const SizedBox(height: 4),
+
+            // 지지 행
+            Row(children: [
+              const SizedBox(width: 48),
+              ...pillars.map((p) => Expanded(child: _jijiCell(p))),
+            ]),
+
+            const SizedBox(height: 10),
+            const TraditionalDivider(indent: 0),
+            const SizedBox(height: 10),
+
+            // 지장간 행
+            Row(children: [
+              const SizedBox(width: 48, child: Text('藏干', style: TextStyle(
+                fontFamily: 'NotoSerifKR',
+                fontSize: 10, color: AppColors.textSecondary, letterSpacing: 1))),
+              ...pillars.map((p) {
+                final gj = p['gj'] as Map<String, String>;
+                final hidden = JijangGan.get(gj['jiji']!);
+                final oe = gj['oehaeng_jiji']!;
+                final color = AppColors.getOehaengColor(oe);
+                return Expanded(child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(children: hidden.map((s) => Text(s,
+                    style: TextStyle(
+                      fontFamily: 'NotoSerifKR',
+                      fontSize: 11, color: color.withOpacity(0.8)),
+                    textAlign: TextAlign.center,
+                  )).toList()),
+                ));
+              }),
+            ]),
+          ]),
+        ).animate().fadeIn().slideY(begin: 0.1),
+
+        const SizedBox(height: 12),
+
+        // ─── 기둥별 설명 ──────────────────────────────
+        ...pillars.asMap().entries.map((e) {
+          final idx = e.key;
+          final p = e.value;
+          final gj = p['gj'] as Map<String, String>;
+          final cg = gj['cheongan']!;
+          final ji = gj['jiji']!;
+          final oe = gj['oehaeng_cheongan']!;
+          final color = AppColors.getOehaengColor(oe);
+          final gongmang = result.shinSalResult.gongmang;
+          final isGongmang = gongmang.contains(ji);
+
+          return TraditionalCard(
+            doubleBorder: true,
+            borderColor: color.withOpacity(0.3),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                  width: 48, height: 54,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: color.withOpacity(0.4)),
+                  ),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(cg, style: TextStyle(
+                      fontFamily: 'NotoSerifKR', fontSize: 16,
+                      fontWeight: FontWeight.bold, color: color)),
+                    Container(height: 0.5, margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      color: color.withOpacity(0.3)),
+                    Text(ji, style: const TextStyle(
+                      fontFamily: 'NotoSerifKR', fontSize: 16,
+                      fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  ]),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  ShaderMask(
+                    shaderCallback: (b) => LinearGradient(
+                      colors: [color, color.withOpacity(0.7)]).createShader(b),
+                    child: Text(
+                      p['label'] as String,
+                      style: const TextStyle(
+                        fontFamily: 'NotoSerifKR', fontSize: 13,
+                        fontWeight: FontWeight.bold, color: Colors.white,
+                        letterSpacing: 0.5),
+                    ),
+                  ),
+                  Text(p['sub'] as String, style: const TextStyle(
+                    fontSize: 10, color: AppColors.textSecondary)),
+                ])),
+                if (isGongmang)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.hwaColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(color: AppColors.hwaColor.withOpacity(0.4)),
+                    ),
+                    child: const Text('공망', style: TextStyle(
+                      fontSize: 10, color: AppColors.hwaColor,
+                      fontWeight: FontWeight.bold)),
+                  ),
+              ]),
+              const SizedBox(height: 10),
+              // 오행 + 지장간
+              Row(children: [
+                OehaengBadge(oe),
+                const SizedBox(width: 10),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('천간 오행: $oe(${_oeHanja(oe)})',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  Text('지장간: ${JijangGan.get(ji).join(" · ")}',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                ]),
+              ]),
+            ]),
+          ).animate(delay: Duration(milliseconds: idx * 60)).fadeIn().slideX(begin: 0.06);
+        }),
+      ],
+    );
+  }
+
+  Widget _cganCell(Map<String, Object> p) {
+    final gj = p['gj'] as Map<String, String>;
+    final oe = gj['oehaeng_cheongan']!;
+    final color = AppColors.getOehaengColor(oe);
+    final isIlju = p['sub'] == '자신·배우자';
+    return Column(children: [
+      if (isIlju)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          margin: const EdgeInsets.only(bottom: 2),
+          decoration: BoxDecoration(
+            color: AppColors.accent.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: const Text('일간', style: TextStyle(
+            fontSize: 7, color: AppColors.accent, letterSpacing: 0.5)),
+        ),
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          border: Border.all(color: color.withOpacity(0.4)),
+        ),
+        child: Center(child: Text(gj['cheongan']!, style: TextStyle(
+          fontFamily: 'NotoSerifKR', fontSize: 20,
+          fontWeight: FontWeight.bold, color: color))),
+      ),
+      Text(oe, style: TextStyle(fontSize: 8, color: color.withOpacity(0.8))),
+    ]);
+  }
+
+  Widget _jijiCell(Map<String, Object> p) {
+    final gj = p['gj'] as Map<String, String>;
+    final oe = gj['oehaeng_jiji']!;
+    final color = AppColors.getOehaengColor(oe);
+    return Column(children: [
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withOpacity(0.5),
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(4)),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Center(child: Text(gj['jiji']!, style: const TextStyle(
+          fontFamily: 'NotoSerifKR', fontSize: 20,
+          fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
+      ),
+      Text(oe, style: TextStyle(fontSize: 8, color: color.withOpacity(0.8))),
+    ]);
+  }
+
+  String _oeHanja(String oe) {
+    const m = {'목': '木', '화': '火', '토': '土', '금': '金', '수': '水'};
+    return m[oe] ?? oe;
   }
 }
 
