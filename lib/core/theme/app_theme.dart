@@ -1,41 +1,41 @@
 import 'package:flutter/material.dart';
 
-/// 전통 한국 색채 팔레트 — 단청(丹靑) + 한지(韓紙) + 오방색(五方色)
+/// 따뜻한 크림/베이지 라이트 테마 — Change Mind 앱 스타일
 class AppColors {
-  // ─── 배경계 (먹빛 계열) ────────────────────────────
-  static const Color surface   = Color(0xFF0D0804);  // 먹색 (濃墨)
-  static const Color cardBg    = Color(0xFF1C100A);  // 한지 그림자
-  static const Color cardBg2   = Color(0xFF261508);  // 한지 카드
-  static const Color divider   = Color(0xFF4A2010);  // 단청 선
+  // ─── 배경계 (크림/베이지 계열) ────────────────────────
+  static const Color surface   = Color(0xFFF7F2EA);  // 따뜻한 크림
+  static const Color cardBg    = Color(0xFFFFFFFF);  // 흰 카드
+  static const Color cardBg2   = Color(0xFFF0EAE0);  // 연한 크림 카드
+  static const Color divider   = Color(0xFFE5D9C8);  // 따뜻한 베이지 구분선
 
-  // ─── 주 색채 (단청 금/적) ─────────────────────────
-  static const Color primary      = Color(0xFF1A0A05); // 흑색 베이스
-  static const Color primaryLight = Color(0xFF3D1A08); // 짙은 적갈
-  static const Color accent       = Color(0xFFC8921A); // 전통 금(黃金)
+  // ─── 주 색채 (갈색/금색 계열) ─────────────────────────
+  static const Color primary      = Color(0xFF2C1A0E); // 짙은 따뜻한 갈색 (배경용)
+  static const Color primaryLight = Color(0xFFF0EAE0); // 연한 크림
+  static const Color accent       = Color(0xFFC8921A); // 전통 금(黃金) 유지
   static const Color accentLight  = Color(0xFFE0A830); // 밝은 금
-  static const Color accentDim    = Color(0xFF7A5810); // 어두운 금
+  static const Color accentDim    = Color(0xFF9A6E10); // 어두운 금
 
-  // ─── 텍스트 (한지색) ─────────────────────────────
-  static const Color textPrimary   = Color(0xFFF0E4C2); // 한지 크림
-  static const Color textSecondary = Color(0xFF9A7840); // 황토 갈색
-  static const Color textMuted     = Color(0xFF5A3820); // 어두운 갈색
+  // ─── 텍스트 (갈색 계열) ──────────────────────────────
+  static const Color textPrimary   = Color(0xFF2C1A0E); // 짙은 갈색
+  static const Color textSecondary = Color(0xFF7A6248); // 중간 갈색
+  static const Color textMuted     = Color(0xFFA89882); // 밝은 갈색
 
-  // ─── 단청 포인트 컬러 ─────────────────────────────
-  static const Color red   = Color(0xFF9B2010); // 단청 적(赤)
-  static const Color teal  = Color(0xFF1B5E50); // 단청 청(靑)
-  static const Color jade  = Color(0xFF2D6B3A); // 비취 녹(綠)
+  // ─── 포인트 컬러 ──────────────────────────────────────
+  static const Color red   = Color(0xFF9B2010); // 전통 적(赤)
+  static const Color teal  = Color(0xFF2E7A5A); // 밝은 초록
+  static const Color jade  = Color(0xFF3D8A4A); // 비취 녹(綠)
 
-  // ─── 오행색 (五行色) — 전통 오방색 기반 ─────────────
+  // ─── 오행색 (五行色) — 오방색 기반, 약간 더 선명하게 ────
   // 목(木) 청색(靑) — 동쪽, 봄, 나무
-  static const Color mokColor  = Color(0xFF2E7D5A);
+  static const Color mokColor  = Color(0xFF3D8A5A);
   // 화(火) 적색(赤) — 남쪽, 여름, 불
-  static const Color hwaColor  = Color(0xFFBB2E0E);
+  static const Color hwaColor  = Color(0xFFCC3311);
   // 토(土) 황색(黃) — 중앙, 환절기, 흙
-  static const Color toColor   = Color(0xFFC08010);
+  static const Color toColor   = Color(0xFFC88810);
   // 금(金) 백색(白) — 서쪽, 가을, 쇠
-  static const Color geumColor = Color(0xFFC0B090);
+  static const Color geumColor = Color(0xFF9AA0A8);
   // 수(水) 흑색(黑) — 북쪽, 겨울, 물
-  static const Color suColor   = Color(0xFF1A5880);
+  static const Color suColor   = Color(0xFF2266AA);
 
   static Color getOehaengColor(String oe) {
     switch (oe) {
@@ -48,23 +48,23 @@ class AppColors {
     }
   }
 
-  // ─── 그라디언트 ───────────────────────────────────
+  // ─── 그라디언트 ───────────────────────────────────────
 
-  /// 배경 그라디언트 — 먹빛 옻칠 효과
+  /// 배경 그라디언트 — 따뜻한 크림 톤
   static LinearGradient get mainGradient => const LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF1A0A05), Color(0xFF0D0804)],
+    colors: [Color(0xFFF7F2EA), Color(0xFFEDE5D5)],
   );
 
-  /// 카드 그라디언트 — 단청 적갈 톤
+  /// 카드 그라디언트 — 흰색 → 연한 크림
   static LinearGradient get cardGradient => const LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF261508), Color(0xFF1C100A)],
+    colors: [Color(0xFFFFFFFF), Color(0xFFF5EFE5)],
   );
 
-  /// 금빛 그라디언트 — 전통 금박 효과
+  /// 금빛 그라디언트 — 전통 금박 효과 (기존 유지)
   static LinearGradient get goldGradient => const LinearGradient(
     colors: [
       Color(0xFF7A5810),
@@ -75,24 +75,24 @@ class AppColors {
     ],
   );
 
-  /// 단청 헤더 그라디언트
+  /// 헤더 그라디언트 — 따뜻한 베이지
   static LinearGradient get headerGradient => const LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2A1005), Color(0xFF1A0804), Color(0xFF0D0804)],
+    colors: [Color(0xFFF0E8D5), Color(0xFFE8DCC5)],
   );
 }
 
 class AppTheme {
-  static ThemeData get dark => ThemeData(
+  static ThemeData get light => ThemeData(
     useMaterial3: true,
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     scaffoldBackgroundColor: AppColors.surface,
-    colorScheme: const ColorScheme.dark(
+    colorScheme: const ColorScheme.light(
       primary: AppColors.accent,
       secondary: AppColors.teal,
       surface: AppColors.cardBg,
-      onPrimary: AppColors.primary,
+      onPrimary: Colors.white,
       onSurface: AppColors.textPrimary,
     ),
     textTheme: const TextTheme(
@@ -131,32 +131,34 @@ class AppTheme {
         letterSpacing: 1.5,
       ),
       iconTheme: const IconThemeData(color: AppColors.accent),
-      // 앱바 하단 금빛 구분선
       shape: const Border(
         bottom: BorderSide(color: AppColors.divider, width: 1),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.accentDim,
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: AppColors.accent,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4),
-          side: const BorderSide(color: AppColors.accent, width: 1),
+          side: const BorderSide(color: AppColors.accentDim, width: 1),
         ),
         textStyle: const TextStyle(
           fontFamily: 'NotoSerifKR',
           fontSize: 16, fontWeight: FontWeight.bold,
           letterSpacing: 1,
         ),
+        elevation: 2,
+        shadowColor: Colors.black26,
       ),
     ),
     cardTheme: CardTheme(
       color: AppColors.cardBg,
-      elevation: 0,
+      elevation: 2,
+      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
         side: const BorderSide(color: AppColors.divider, width: 1),
       ),
     ),
@@ -174,5 +176,12 @@ class AppTheme {
       iconColor: AppColors.accent,
       textColor: AppColors.textPrimary,
     ),
+    dividerTheme: const DividerThemeData(
+      color: AppColors.divider,
+      thickness: 1,
+    ),
   );
+
+  /// main.dart 호환성 유지 — dark getter는 light 테마를 반환
+  static ThemeData get dark => light;
 }
