@@ -291,6 +291,8 @@ class _InputScreenState extends State<InputScreen> {
                                   suffixStyle: const TextStyle(
                                     fontSize: 13, color: AppColors.textSecondary),
                                 ),
+                                onTap: () => _yearCtrl.selection = TextSelection(
+                                  baseOffset: 0, extentOffset: _yearCtrl.text.length),
                                 onChanged: (v) {
                                   if (v.length == 4) {
                                     _monthFocus.requestFocus();
@@ -326,6 +328,8 @@ class _InputScreenState extends State<InputScreen> {
                                   suffixStyle: const TextStyle(
                                     fontSize: 13, color: AppColors.textSecondary),
                                 ),
+                                onTap: () => _monthCtrl.selection = TextSelection(
+                                  baseOffset: 0, extentOffset: _monthCtrl.text.length),
                                 onChanged: (v) {
                                   if (v.length == 2) {
                                     _dayFocus.requestFocus();
@@ -359,6 +363,8 @@ class _InputScreenState extends State<InputScreen> {
                                   suffixStyle: const TextStyle(
                                     fontSize: 13, color: AppColors.textSecondary),
                                 ),
+                                onTap: () => _dayCtrl.selection = TextSelection(
+                                  baseOffset: 0, extentOffset: _dayCtrl.text.length),
                                 onFieldSubmitted: (_) => _submit(),
                                 validator: (_) {
                                   final parsed = _parseBirthDate();
