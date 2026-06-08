@@ -171,3 +171,74 @@ class WonkwangData {
   /// 납음 오행 간단 조회
   static String naeumElement(int ci, int ji) => naeumElements[ganJi60(ci, ji)];
 }
+
+// ══════════════════════════════════════════════════════════
+// 원광식 진태양시 보정 (眞太陽時)
+// = 경도 보정(지방시) + 균시차(Equation of Time)
+// ══════════════════════════════════════════════════════════
+class TrueSolarTime {
+  // ─── 한국 주요 도시 경도 (WGS84) ──────────────────────
+  static const Map<String, double> cityLongitudes = {
+    '서울':  126.978,
+    '인천':  126.705,
+    '수원':  127.019,
+    '대전':  127.385,
+    '청주':  127.489,
+    '세종':  127.289,
+    '광주':  126.852,
+    '전주':  127.148,
+    '목포':  126.388,
+    '여수':  127.662,
+    '대구':  128.601,
+    '부산':  129.075,
+    '울산':  129.312,
+    '창원':  128.682,
+    '강릉':  128.876,
+    '춘천':  127.729,
+    '원주':  127.920,
+    '제주':  126.531,
+    '서귀포': 126.560,
+  };
+
+  /// 도시명 목록 ('보정 안 함' 포함)
+  static List<String> get cityNames =>
+      ['보정 안 함', ...cityLongitudes.keys];
+
+  /// 진태양시 보정값 계산 (분 단위, 음수 가능)
+  ///
+  /// = 경도 보정 + 균시차 (Spencer 1971, 정밀도 ±1분)
+  ///
+  /// 서울 예시:
+  ///  · 경도보정: (126.978 - 135) × 4 = -32.1분
+  ///  · 균시차: -14분(2월) ~ +16분(11월)
+  ///  · 최종 범위: 약 -46분 ~ -16분
+  static int correctionMinutes(DateTime date, double longitude) {
+    // 1. 경도 보정 — KST 기준자오선 135°E 대비
+    final longitudeOffset = (longitude - 135.0) * 4.0;
+
+    // 2. 균시차 (Spencer, 1971)
+    //    B = 2π × (N−1) / 365, N = 연중 일수
+    final n = date.difference(DateTime(date.year, 1, 1)).inDays + 1;
+    final B = 2 * pi * (n - 1) / 365;
+    final eot = 229.18 * (
+        0.000075
+        + 0.001868 * cos(B)  - 0.032077 * sin(B)
+        - 0.014615 * cos(2 * B) - 0.040890 * sin(2 * B));
+
+    return (longitudeOffset + eot).round();
+  }
+
+  /// 도시명 → 경도 (도시 미등록이면 null)
+  static double? longitude(String cityName) => cityLongitudes[cityName];
+
+  /// 보정 후 KST 시각 문자열 반환 — 예: "진태양시 02:28"
+  static String correctedTimeLabel(
+      int kstHour, int kstMinute, DateTime date, double longitude) {
+    final correction = correctionMinutes(date, longitude);
+    final total = ((kstHour * 60 + kstMinute + correction) % 1440 + 1440) % 1440;
+    final h = total ~/ 60;
+    final m = total % 60;
+    final sign = correction >= 0 ? '+' : '';
+    return '진태양시 ${h.toString().padLeft(2,'0')}:${m.toString().padLeft(2,'0')} ($sign${correction}분)';
+  }
+}

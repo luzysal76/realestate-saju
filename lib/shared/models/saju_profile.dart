@@ -19,12 +19,20 @@ class SajuProfile extends HiveObject {
   @HiveField(4)
   late DateTime createdAt;
 
+  @HiveField(5)
+  int birthMinute;        // 출생 분(0~59), 기본값 0
+
+  @HiveField(6)
+  double? birthLongitude; // 진태양시 보정용 경도 (null = 보정 없음)
+
   SajuProfile({
     required this.name,
     required this.birthDate,
     required this.birthHour,
     required this.gender,
     DateTime? createdAt,
+    this.birthMinute = 0,
+    this.birthLongitude,
   }) : createdAt = createdAt ?? DateTime.now();
 
   String get birthHourLabel {

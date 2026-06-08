@@ -139,8 +139,18 @@ class SajuCalculator {
     return _ganjiMap(ci, ji);
   }
 
-  static Map<String, String> hourToGanJi(int hour, String dayCg) {
-    final ji = (hour + 1) ~/ 2 % 12;
+  /// 시주 간지 계산
+  /// [minute]: 출생 분 (0~59)
+  /// [correctionMin]: 진태양시 보정 분수 (음수 가능, 기본 0)
+  static Map<String, String> hourToGanJi(int hour, String dayCg,
+      {int minute = 0, int correctionMin = 0}) {
+    // 분 단위로 시주 결정 (경계 처리 포함)
+    final totalMin = hour * 60 + minute + correctionMin;
+    // 0~1439 정규화
+    final normMin = ((totalMin % 1440) + 1440) % 1440;
+    // 자시(子時)=23:00 기준 시주 인덱스
+    //   자=0 축=1 인=2 ... 해=11
+    final ji = ((normMin + 60) % 1440) ~/ 120;
     final dayCi = cheongan.indexOf(dayCg);
     final base = (dayCi % 5) * 2;
     final ci = (base + ji) % 10;
@@ -450,12 +460,20 @@ class SajuCalculator {
   static SajuResult calculate({
     required DateTime birthDate,
     required int birthHour,
+    int birthMinute = 0,           // 출생 분 (0~59)
+    double? birthLongitude,        // 진태양시 보정용 경도 (null = 보정 없음)
     required String gender,
   }) {
+    // 진태양시 보정
+    final correctionMin = birthLongitude != null
+        ? TrueSolarTime.correctionMinutes(birthDate, birthLongitude)
+        : 0;
+
     final yearGj = yearToGanJi(birthDate.year);
     final monthGj = monthToGanJi(birthDate.year, birthDate.month, birthDate.day);
     final dayGj = dayToGanJi(birthDate);
-    final hourGj = hourToGanJi(birthHour, dayGj['cheongan']!);
+    final hourGj = hourToGanJi(birthHour, dayGj['cheongan']!,
+        minute: birthMinute, correctionMin: correctionMin);
 
     final ilgan = dayGj['cheongan']!;
     final ilji = dayGj['jiji']!;

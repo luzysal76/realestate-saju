@@ -167,6 +167,8 @@ class _ProfileSelectScreenState extends State<ProfileSelectScreen> {
     final result = SajuCalculator.calculate(
       birthDate: profile.birthDate,
       birthHour: profile.birthHour == 25 ? 12 : profile.birthHour,
+      birthMinute: profile.birthMinute,
+      birthLongitude: profile.birthLongitude,
       gender: profile.gender,
     );
     final oe = result.mainOehaeng;

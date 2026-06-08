@@ -3,6 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
+import '../../core/saju/lunar_converter.dart';
+import '../../core/saju/wonkwang_data.dart';
 import '../../shared/models/saju_profile.dart';
 import '../dashboard/dashboard_screen.dart';
 
@@ -15,12 +17,25 @@ class InputScreen extends StatefulWidget {
 
 class _InputScreenState extends State<InputScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
+  final _nameCtrl  = TextEditingController();
+  final _yearCtrl  = TextEditingController(text: '1990');
+  final _monthCtrl = TextEditingController(text: '01');
+  final _dayCtrl   = TextEditingController(text: '01');
+
+  final _yearFocus  = FocusNode();
+  final _monthFocus = FocusNode();
+  final _dayFocus   = FocusNode();
 
   DateTime _birthDate = DateTime(1990, 1, 1);
   int _birthHour = 12;
+  int _birthMinute = 0;
   String _gender = '남';
   bool _unknownHour = false;
+  bool _isLunar = false;      // 음력 입력 모드
+  bool _isLeapMonth = false;  // 윤달 여부
+  // 원광식 진태양시 보정
+  bool _useTrueSolarTime = false;
+  String? _birthCity;
 
   final List<String> _hourLabels = List.generate(24, (i) =>
     '${i.toString().padLeft(2, '0')}시 (${_hourToJiji(i)}시)');
@@ -35,32 +50,75 @@ class _InputScreenState extends State<InputScreen> {
     return jijiHours[h];
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _birthDate,
-      firstDate: DateTime(1930),
-      lastDate: DateTime.now().subtract(const Duration(days: 365)),
-      builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: ColorScheme.dark(
-            primary: AppColors.accent,
-            surface: AppColors.cardBg,
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) setState(() => _birthDate = picked);
+  @override
+  void initState() {
+    super.initState();
+    // 날짜 입력 변경 시 음력 미리보기 실시간 갱신
+    _yearCtrl.addListener(_onDateTextChanged);
+    _monthCtrl.addListener(_onDateTextChanged);
+    _dayCtrl.addListener(_onDateTextChanged);
+  }
+
+  void _onDateTextChanged() {
+    if (_isLunar) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _yearCtrl.dispose(); _monthCtrl.dispose(); _dayCtrl.dispose();
+    _yearFocus.dispose(); _monthFocus.dispose(); _dayFocus.dispose();
+    super.dispose();
+  }
+
+  /// 년/월/일 텍스트 → DateTime 변환 (유효성 검사 포함)
+  DateTime? _parseBirthDate() {
+    final y = int.tryParse(_yearCtrl.text.trim());
+    final m = int.tryParse(_monthCtrl.text.trim());
+    final d = int.tryParse(_dayCtrl.text.trim());
+    if (y == null || m == null || d == null) return null;
+    if (y < 1930 || y > DateTime.now().year) return null;
+    if (m < 1 || m > 12) return null;
+    if (d < 1 || d > 30) return null;
+
+    if (_isLunar) {
+      // 음력 → 양력 변환
+      return LunarConverter.lunarToSolar(y, m, d, isLeap: _isLeapMonth);
+    }
+
+    // 양력
+    if (d > 31) return null;
+    try {
+      final dt = DateTime(y, m, d);
+      if (dt.isAfter(DateTime.now())) return null;
+      return dt;
+    } catch (_) { return null; }
+  }
+
+  /// 음력 모드일 때 변환된 양력 날짜를 안내 문자열로 반환
+  String? _lunarPreviewText() {
+    if (!_isLunar) return null;
+    final solar = _parseBirthDate();
+    if (solar == null) return null;
+    return '→ 양력 ${solar.year}년 ${solar.month}월 ${solar.day}일';
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    final parsed = _parseBirthDate();
+    if (parsed == null) return; // validator가 이미 막음
+    _birthDate = parsed;
+
+    final cityLon = (_useTrueSolarTime && _birthCity != null)
+        ? TrueSolarTime.longitude(_birthCity!)
+        : null;
 
     final profile = SajuProfile(
       name: _nameCtrl.text.trim(),
       birthDate: _birthDate,
       birthHour: _unknownHour ? 25 : _birthHour,
+      birthMinute: _unknownHour ? 0 : _birthMinute,
+      birthLongitude: cityLon,
       gender: _gender,
     );
 
@@ -193,41 +251,186 @@ class _InputScreenState extends State<InputScreen> {
 
                     const SizedBox(height: 12),
 
-                    // ─── 생년월일 ───────────────────────────────────
+                    // ─── 생년월일 (숫자 직접 입력) ──────────────────
                     TraditionalCard(
                       doubleBorder: true,
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _fieldLabel('生年月日', '생년월일'),
+                          // 라벨 + 양력/음력 토글
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _fieldLabel('生年月日', '생년월일'),
+                              Row(children: [
+                                _calTypeBtn('양력', '陽曆', false),
+                                const SizedBox(width: 4),
+                                _calTypeBtn('음력', '陰曆', true),
+                              ]),
+                            ],
+                          ),
                           const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: _pickDate,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                    color: AppColors.divider, width: 1),
+                          Row(children: [
+                            // 년도
+                            Expanded(
+                              flex: 5,
+                              child: TextFormField(
+                                controller: _yearCtrl,
+                                focusNode: _yearFocus,
+                                keyboardType: TextInputType.number,
+                                maxLength: 4,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'NotoSerifKR',
+                                  color: AppColors.textPrimary,
+                                  fontSize: 17, letterSpacing: 1,
+                                ),
+                                decoration: _inputDeco('1990').copyWith(
+                                  counterText: '',
+                                  suffixText: '년',
+                                  suffixStyle: const TextStyle(
+                                    fontSize: 13, color: AppColors.textSecondary),
+                                ),
+                                onChanged: (v) {
+                                  if (v.length == 4) {
+                                    _monthFocus.requestFocus();
+                                  }
+                                },
+                                validator: (_) {
+                                  final y = int.tryParse(_yearCtrl.text.trim());
+                                  if (y == null || y < 1930 || y > DateTime.now().year) {
+                                    return '년도 오류';
+                                  }
+                                  return null;
+                                },
                               ),
-                              child: Row(children: [
-                                Text(
-                                  '${_birthDate.year}년  ${_birthDate.month}월  ${_birthDate.day}일',
+                            ),
+                            const SizedBox(width: 8),
+                            // 월
+                            Expanded(
+                              flex: 3,
+                              child: TextFormField(
+                                controller: _monthCtrl,
+                                focusNode: _monthFocus,
+                                keyboardType: TextInputType.number,
+                                maxLength: 2,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'NotoSerifKR',
+                                  color: AppColors.textPrimary,
+                                  fontSize: 17, letterSpacing: 1,
+                                ),
+                                decoration: _inputDeco('01').copyWith(
+                                  counterText: '',
+                                  suffixText: '월',
+                                  suffixStyle: const TextStyle(
+                                    fontSize: 13, color: AppColors.textSecondary),
+                                ),
+                                onChanged: (v) {
+                                  if (v.length == 2) {
+                                    _dayFocus.requestFocus();
+                                  }
+                                },
+                                validator: (_) {
+                                  final m = int.tryParse(_monthCtrl.text.trim());
+                                  if (m == null || m < 1 || m > 12) return '월 오류';
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // 일
+                            Expanded(
+                              flex: 3,
+                              child: TextFormField(
+                                controller: _dayCtrl,
+                                focusNode: _dayFocus,
+                                keyboardType: TextInputType.number,
+                                maxLength: 2,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'NotoSerifKR',
+                                  color: AppColors.textPrimary,
+                                  fontSize: 17, letterSpacing: 1,
+                                ),
+                                decoration: _inputDeco('01').copyWith(
+                                  counterText: '',
+                                  suffixText: '일',
+                                  suffixStyle: const TextStyle(
+                                    fontSize: 13, color: AppColors.textSecondary),
+                                ),
+                                onFieldSubmitted: (_) => _submit(),
+                                validator: (_) {
+                                  final parsed = _parseBirthDate();
+                                  if (parsed == null) {
+                                    return _isLunar ? '음력 날짜 오류' : '날짜 오류';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ]),
+
+                          // 음력 모드: 윤달 체크 + 변환 미리보기
+                          if (_isLunar) ...[
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              // 윤달 체크박스
+                              GestureDetector(
+                                onTap: () => setState(() {
+                                  _isLeapMonth = !_isLeapMonth;
+                                }),
+                                child: Row(children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 160),
+                                    width: 18, height: 18,
+                                    decoration: BoxDecoration(
+                                      color: _isLeapMonth
+                                          ? AppColors.accent.withOpacity(0.2)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(2),
+                                      border: Border.all(
+                                        color: _isLeapMonth
+                                            ? AppColors.accent
+                                            : AppColors.divider,
+                                      ),
+                                    ),
+                                    child: _isLeapMonth
+                                      ? const Icon(Icons.check,
+                                          size: 13, color: AppColors.accent)
+                                      : null,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '윤달 (閏月)',
+                                    style: TextStyle(
+                                      fontFamily: 'NotoSerifKR',
+                                      fontSize: 12,
+                                      color: _isLeapMonth
+                                          ? AppColors.accent
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ]),
+                              ),
+                              const Spacer(),
+                              // 변환된 양력 날짜 미리보기
+                              Builder(builder: (_) {
+                                final preview = _lunarPreviewText();
+                                if (preview == null) return const SizedBox.shrink();
+                                return Text(
+                                  preview,
                                   style: const TextStyle(
                                     fontFamily: 'NotoSerifKR',
-                                    color: AppColors.textPrimary,
-                                    fontSize: 16, letterSpacing: 1,
+                                    fontSize: 12,
+                                    color: AppColors.accent,
+                                    letterSpacing: 0.3,
                                   ),
-                                ),
-                                const Spacer(),
-                                const Icon(Icons.expand_more,
-                                    color: AppColors.accent, size: 20),
-                              ]),
-                            ),
-                          ),
+                                );
+                              }),
+                            ]),
+                          ],
                         ],
                       ),
                     ).animate(delay: 280.ms).fadeIn().slideX(begin: -0.1),
@@ -299,33 +502,175 @@ class _InputScreenState extends State<InputScreen> {
                           ]),
                           if (!_unknownHour) ...[
                             const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: AppColors.divider),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<int>(
-                                  value: _birthHour,
-                                  isExpanded: true,
-                                  dropdownColor: AppColors.cardBg,
-                                  style: const TextStyle(
-                                    fontFamily: 'NotoSerifKR',
-                                    color: AppColors.textPrimary,
-                                    fontSize: 15, letterSpacing: 0.5,
+                            // 시 드롭다운 + 분 입력
+                            Row(children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppColors.divider),
                                   ),
-                                  icon: const Icon(
-                                      Icons.expand_more, color: AppColors.accent),
-                                  items: List.generate(24, (i) => DropdownMenuItem(
-                                    value: i,
-                                    child: Text(_hourLabels[i]),
-                                  )),
-                                  onChanged: (v) => setState(() => _birthHour = v!),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<int>(
+                                      value: _birthHour,
+                                      isExpanded: true,
+                                      dropdownColor: AppColors.cardBg,
+                                      style: const TextStyle(
+                                        fontFamily: 'NotoSerifKR',
+                                        color: AppColors.textPrimary,
+                                        fontSize: 15, letterSpacing: 0.5,
+                                      ),
+                                      icon: const Icon(
+                                          Icons.expand_more, color: AppColors.accent),
+                                      items: List.generate(24, (i) => DropdownMenuItem(
+                                        value: i,
+                                        child: Text(_hourLabels[i]),
+                                      )),
+                                      onChanged: (v) => setState(() => _birthHour = v!),
+                                    ),
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              // 분 드롭다운
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: AppColors.divider),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: _birthMinute,
+                                    dropdownColor: AppColors.cardBg,
+                                    style: const TextStyle(
+                                      fontFamily: 'NotoSerifKR',
+                                      color: AppColors.textPrimary,
+                                      fontSize: 15,
+                                    ),
+                                    icon: const Icon(Icons.expand_more,
+                                        color: AppColors.accent, size: 18),
+                                    items: [0, 15, 30, 45].map((m) =>
+                                      DropdownMenuItem(
+                                        value: m,
+                                        child: Text(
+                                          '${m.toString().padLeft(2,'0')}분',
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                    ).toList(),
+                                    onChanged: (v) =>
+                                        setState(() => _birthMinute = v!),
+                                  ),
+                                ),
+                              ),
+                            ]),
+
+                            const SizedBox(height: 10),
+
+                            // ─── 원광식 진태양시 보정 ───────────────────
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _useTrueSolarTime = !_useTrueSolarTime;
+                                if (!_useTrueSolarTime) _birthCity = null;
+                              }),
+                              child: Row(children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  width: 18, height: 18,
+                                  decoration: BoxDecoration(
+                                    color: _useTrueSolarTime
+                                        ? AppColors.accent.withOpacity(0.2)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(2),
+                                    border: Border.all(
+                                      color: _useTrueSolarTime
+                                          ? AppColors.accent : AppColors.divider,
+                                    ),
+                                  ),
+                                  child: _useTrueSolarTime
+                                    ? const Icon(Icons.check,
+                                        size: 13, color: AppColors.accent)
+                                    : null,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '원광식 진태양시 보정 (眞太陽時)',
+                                  style: TextStyle(
+                                    fontFamily: 'NotoSerifKR',
+                                    fontSize: 12,
+                                    color: _useTrueSolarTime
+                                        ? AppColors.accent
+                                        : AppColors.textSecondary,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ]),
                             ),
+
+                            if (_useTrueSolarTime) ...[
+                              const SizedBox(height: 8),
+                              // 도시 선택 드롭다운
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: AppColors.accent.withOpacity(0.4)),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _birthCity ?? '보정 안 함',
+                                    isExpanded: true,
+                                    dropdownColor: AppColors.cardBg,
+                                    style: const TextStyle(
+                                      fontFamily: 'NotoSerifKR',
+                                      color: AppColors.textPrimary,
+                                      fontSize: 14,
+                                    ),
+                                    icon: const Icon(Icons.expand_more,
+                                        color: AppColors.accent),
+                                    items: TrueSolarTime.cityNames.map((c) =>
+                                      DropdownMenuItem(
+                                        value: c,
+                                        child: Text(c),
+                                      ),
+                                    ).toList(),
+                                    onChanged: (v) => setState(() =>
+                                        _birthCity = v == '보정 안 함' ? null : v),
+                                  ),
+                                ),
+                              ),
+                              // 보정 결과 미리보기
+                              if (_birthCity != null) ...[
+                                const SizedBox(height: 6),
+                                Builder(builder: (_) {
+                                  final lon = TrueSolarTime.longitude(_birthCity!);
+                                  if (lon == null) return const SizedBox.shrink();
+                                  final parsed = _parseBirthDate();
+                                  final date = parsed ?? DateTime(1990, 1, 1);
+                                  final label = TrueSolarTime.correctedTimeLabel(
+                                    _birthHour, _birthMinute, date, lon);
+                                  return Row(children: [
+                                    const Icon(Icons.solar_power,
+                                        size: 13, color: AppColors.accent),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      label,
+                                      style: const TextStyle(
+                                        fontFamily: 'NotoSerifKR',
+                                        fontSize: 12,
+                                        color: AppColors.accent,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ]);
+                                }),
+                              ],
+                            ],
                           ] else ...[
                             const SizedBox(height: 8),
                             Text(
@@ -444,6 +789,51 @@ class _InputScreenState extends State<InputScreen> {
       ),
     ),
   ]);
+
+  /// 양력/음력 선택 버튼
+  Widget _calTypeBtn(String label, String hanja, bool isLunarBtn) {
+    final sel = _isLunar == isLunarBtn;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _isLunar = isLunarBtn;
+        _isLeapMonth = false;
+      }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: sel
+              ? AppColors.accent.withOpacity(0.13)
+              : AppColors.surface.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: sel ? AppColors.accent : AppColors.divider,
+            width: sel ? 1.5 : 1,
+          ),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(
+            hanja,
+            style: TextStyle(
+              fontFamily: 'NotoSerifKR',
+              fontSize: 11,
+              color: sel ? AppColors.accent : AppColors.textSecondary,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'NotoSerifKR',
+              fontSize: 12, fontWeight: FontWeight.bold,
+              color: sel ? AppColors.accent : AppColors.textSecondary,
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
 
   Widget _genderBtn(String value, String hanja, String sub) {
     final sel = _gender == value;

@@ -34,6 +34,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _result = SajuCalculator.calculate(
       birthDate: widget.profile.birthDate,
       birthHour: widget.profile.birthHour == 25 ? 12 : widget.profile.birthHour,
+      birthMinute: widget.profile.birthMinute,
+      birthLongitude: widget.profile.birthLongitude,
       gender: widget.profile.gender,
     );
   }
