@@ -79,7 +79,7 @@ class _InputScreenState extends State<InputScreen> {
     if (y == null || m == null || d == null) return null;
     if (y < 1930 || y > DateTime.now().year) return null;
     if (m < 1 || m > 12) return null;
-    if (d < 1 || d > 30) return null;
+    if (d < 1 || d > (_isLunar ? 30 : 31)) return null;
 
     if (_isLunar) {
       // 음력 → 양력 변환
@@ -87,7 +87,6 @@ class _InputScreenState extends State<InputScreen> {
     }
 
     // 양력
-    if (d > 31) return null;
     try {
       final dt = DateTime(y, m, d);
       if (dt.isAfter(DateTime.now())) return null;
