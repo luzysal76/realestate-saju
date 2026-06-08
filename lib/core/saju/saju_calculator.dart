@@ -1,6 +1,8 @@
 // 사주 계산 엔진 v2 — 천간/지지/오행/십성/대운/세운/신살 완전 구현
+// 원광만세력 데이터 통합: 천문 절기 계산 · 납음오행 · 지장간 수정
 
 import 'shinsal.dart';
+import 'wonkwang_data.dart';
 
 class SajuCalculator {
   // ─── 기본 상수 ───────────────────────────────────────
@@ -100,43 +102,28 @@ class SajuCalculator {
     return _ganjiMap(ci, ji);
   }
 
-  // ─── 절기 기준일 (양력 평균치 ±1일) ────────────────
-  // [월, 절기일, 해당 지지 인덱스]
-  static const List<List<int>> _jeolgiDates = [
-    [1,  6,  1],  // 소한(小寒)  → 축월(丑月)
-    [2,  4,  2],  // 입춘(立春)  → 인월(寅月)
-    [3,  6,  3],  // 경칩(驚蟄)  → 묘월(卯月)
-    [4,  5,  4],  // 청명(淸明)  → 진월(辰月)
-    [5,  6,  5],  // 입하(立夏)  → 사월(巳月)
-    [6,  6,  6],  // 망종(芒種)  → 오월(午月)
-    [7,  7,  7],  // 소서(小暑)  → 미월(未月)
-    [8,  7,  8],  // 입추(立秋)  → 신월(申月)
-    [9,  8,  9],  // 백로(白露)  → 유월(酉月)
-    [10, 8,  10], // 한로(寒露)  → 술월(戌月)
-    [11, 7,  11], // 입동(立冬)  → 해월(亥月)
-    [12, 7,  0],  // 대설(大雪)  → 자월(子月)
-  ];
-
-  /// 절기 기반 정확한 월주 계산
-  /// [day] 를 전달하면 절기 전후를 구분합니다 (기본값 15 = 월 중순)
+  /// 원광만세력: 천문 계산 기반 정확한 월주 결정
+  /// 기존 평균치(±1일 오차)를 실제 절입일 계산으로 교체
   static Map<String, String> monthToGanJi(int year, int month, [int day = 15]) {
-    // 절기 기준 지지 결정: 위 배열을 앞에서부터 순회하며 조건 충족 시 갱신
-    // 초기값 0 (자월) = 1월 소한 이전, 12월 대설 이전의 경우
+    // 원광만세력 절기 날짜 (천문학적 계산, KST 기준)
+    final jeolgiDates = JeolgiCalculator.getYear(year);
+
+    // 절기를 순서대로 확인하여 마지막으로 지난 절기의 지지 채택
+    // 초기값 0(자월) = 대설~소한 사이 (연초 소한 이전 포함)
     int jijiIdx = 0;
-    for (final jd in _jeolgiDates) {
-      final jMonth = jd[0], jDay = jd[1], newJi = jd[2];
-      if (month > jMonth || (month == jMonth && day >= jDay)) {
-        jijiIdx = newJi;
+    for (int i = 0; i < 12; i++) {
+      final jd = jeolgiDates[i];
+      if (month > jd.month || (month == jd.month && day >= jd.day)) {
+        jijiIdx = JeolgiCalculator.jijiIndex[i];
       }
     }
 
-    // 오호둔법(五虎遁法): 년간 기준 인월(寅月) 천간 결정
-    final yearCgIdx = (year - 4) % 10;
+    // 오호둔법(五虎遁法): 년간 기준 인월 천간 결정
     // 갑기년→병인, 을경년→무인, 병신년→경인, 정임년→임인, 무계년→갑인
+    final yearCgIdx = (year - 4) % 10;
     const inMonthBaseCg = [2, 4, 6, 8, 0]; // 병, 무, 경, 임, 갑
     final inBase = inMonthBaseCg[yearCgIdx % 5];
 
-    // 인(2)→묘(3)→...→해(11)→자(0)→축(1) 순서로 오프셋
     const jijiOrder = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1];
     final offset = jijiOrder.indexOf(jijiIdx);
     final cgIdx = (inBase + offset) % 10;
@@ -163,6 +150,8 @@ class SajuCalculator {
   static Map<String, String> _ganjiMap(int ci, int ji) {
     final cg = cheongan[ci];
     final jj = jiji[ji];
+    // 원광만세력: 납음오행 추가
+    final nm = WonkwangData.naeum(ci, ji);
     return {
       'cheongan': cg,
       'jiji': jj,
@@ -170,6 +159,8 @@ class SajuCalculator {
       'oehaeng_jiji': jijiOehaeng[jj]!,
       'yinyang_cheongan': cheonganYinYang[cg].toString(),
       'yinyang_jiji': jijiYinYang[jj].toString(),
+      'naeum':         nm['naeum']!,          // 예: 해중금
+      'naeum_oehaeng': nm['naeum_oehaeng']!,  // 예: 금
     };
   }
 
@@ -325,9 +316,34 @@ class SajuCalculator {
     return list;
   }
 
+  /// 원광만세력: 대운 시작 나이 — 절입일까지의 날수 ÷ 3 (3일=1년)
+  /// 순행: 생일 → 다음 절기까지 날수
+  /// 역행: 이전 절기 → 생일까지 날수
   static int _calcDaeWunStartAge(DateTime birth, bool forward) {
-    // 실제는 절입일 기준이나 근사치 사용
-    return 3 + (birth.month % 6);
+    final y = birth.year;
+    // 전년·당년·다음년 36개 절기 날짜 모두 수집 후 시간순 정렬
+    final all = <DateTime>[
+      ...JeolgiCalculator.getYear(y - 1),
+      ...JeolgiCalculator.getYear(y),
+      ...JeolgiCalculator.getYear(y + 1),
+    ]..sort((a, b) => a.compareTo(b));
+
+    DateTime? prevJ, nextJ;
+    for (final jd in all) {
+      if (!birth.isBefore(jd)) {
+        prevJ = jd; // 생일 이전(포함)의 마지막 절기
+      } else {
+        nextJ = jd; // 생일 이후 첫 절기
+        break;
+      }
+    }
+
+    final days = forward
+        ? (nextJ != null ? nextJ.difference(birth).inDays : 27)
+        : (prevJ != null ? birth.difference(prevJ).inDays : 27);
+
+    // 3일 = 1세, 최소 1세
+    return (days ~/ 3).clamp(1, 9);
   }
 
   static String _getDaeWunTip(String ss, String oe) {

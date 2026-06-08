@@ -117,6 +117,36 @@ class _PillarTab extends StatelessWidget {
                 ));
               }),
             ]),
+
+            const SizedBox(height: 6),
+            const TraditionalDivider(indent: 0),
+            const SizedBox(height: 6),
+
+            // 납음오행 행 (원광만세력)
+            Row(children: [
+              const SizedBox(width: 48, child: Text('納音', style: TextStyle(
+                fontFamily: 'NotoSerifKR',
+                fontSize: 10, color: AppColors.textSecondary, letterSpacing: 1))),
+              ...pillars.map((p) {
+                final gj = p['gj'] as Map<String, String>;
+                final naeum = gj['naeum'] ?? '';
+                final nOe   = gj['naeum_oehaeng'] ?? '';
+                final color = AppColors.getOehaengColor(nOe);
+                return Expanded(child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(children: [
+                    Text(naeum, style: TextStyle(
+                      fontFamily: 'NotoSerifKR',
+                      fontSize: 9, color: color,
+                      fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center),
+                    Text('($nOe)', style: TextStyle(
+                      fontSize: 8, color: color.withOpacity(0.7)),
+                      textAlign: TextAlign.center),
+                  ]),
+                ));
+              }),
+            ]),
           ]),
         ).animate().fadeIn().slideY(begin: 0.1),
 
@@ -196,6 +226,14 @@ class _PillarTab extends StatelessWidget {
                     style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                   Text('지장간: ${JijangGan.get(ji).join(" · ")}',
                     style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  // 원광만세력 납음오행
+                  Text(
+                    '납음오행: ${gj['naeum'] ?? ''} (${_oeHanja(gj['naeum_oehaeng'] ?? '')})',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.getOehaengColor(gj['naeum_oehaeng'] ?? '목')
+                        .withOpacity(0.85)),
+                  ),
                 ]),
               ]),
             ]),
