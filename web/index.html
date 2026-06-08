@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.json">
   <style>
     body {
-      background-color: #0D0804;
+      background-color: #F7F2EA;
       margin: 0;
       overflow: hidden;
     }
@@ -25,7 +25,7 @@
       justify-content: center;
       height: 100vh;
       flex-direction: column;
-      background: linear-gradient(to bottom, #1A0A05, #0D0804);
+      background: linear-gradient(to bottom, #F0E8D5, #F7F2EA);
     }
     #loading h1 {
       color: #C8921A;
@@ -35,7 +35,7 @@
       margin-top: 20px;
     }
     #loading p {
-      color: #9A7840;
+      color: #7A6248;
       font-size: 12px;
       letter-spacing: 2px;
       margin-top: 8px;
@@ -47,11 +47,11 @@
     <h1>不動産四柱</h1>
     <p>부동산 사주 로딩 중...</p>
   </div>
-  <script src="flutter_bootstrap.js" async></script>
   <script>
     window.addEventListener('flutter-first-frame', function() {
       document.getElementById('loading').style.display = 'none';
     });
   </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
