@@ -32,11 +32,11 @@ class SajuDetailScreen extends StatelessWidget {
           bottom: const TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: '八字'),
-              Tab(text: '十星'),
-              Tab(text: '大運'),
-              Tab(text: '歲運'),
-              Tab(text: '神煞'),
+              Tab(text: '사주'),
+              Tab(text: '십성'),
+              Tab(text: '대운'),
+              Tab(text: '세운'),
+              Tab(text: '신살'),
             ],
           ),
         ),
@@ -75,7 +75,7 @@ class _PillarTab extends StatelessWidget {
         TraditionalCard(
           doubleBorder: true,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const KoreanSectionTitle(title: '사주원국 (四柱原局)'),
+            const KoreanSectionTitle(title: '사주 원국'),
             const SizedBox(height: 14),
 
             // 천간 행
@@ -402,7 +402,7 @@ class _SipSeongTab extends StatelessWidget {
         TraditionalCard(
           doubleBorder: true,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const KoreanSectionTitle(title: '기둥별 십성 (柱別 十星)'),
+            const KoreanSectionTitle(title: '기둥별 십성'),
             const SizedBox(height: 12),
             _pillarRow('연주(年)', result.yearGj, ilgan),
             const SizedBox(height: 4),
@@ -420,7 +420,7 @@ class _SipSeongTab extends StatelessWidget {
         TraditionalCard(
           doubleBorder: true,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const KoreanSectionTitle(title: '십성 분포 (十星 分布)'),
+            const KoreanSectionTitle(title: '십성 분포'),
             const SizedBox(height: 12),
             Wrap(
               spacing: 6, runSpacing: 6,

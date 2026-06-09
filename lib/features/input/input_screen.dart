@@ -166,27 +166,51 @@ class _InputScreenState extends State<InputScreen> {
                     // ─── 헤더 ──────────────────────────────────────
                     Center(
                       child: Column(children: [
-                        const SizedBox(height: 8),
-                        const TaegeukSymbol(size: 56),
+                        const SizedBox(height: 4),
+                        // 인기 배너
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Text('⭐', style: TextStyle(fontSize: 11)),
+                            const SizedBox(width: 5),
+                            Text(
+                              '사주 기반 주거 추천 플랫폼',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.accent.withOpacity(0.9),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(height: 16),
+                        const TaegeukSymbol(size: 48),
                         const SizedBox(height: 14),
+                        // 메인 타이틀
                         ShaderMask(
                           shaderCallback: (b) => AppColors.goldGradient.createShader(b),
                           child: const Text(
-                            '命理 入力',
+                            '부동산 사주',
                             style: TextStyle(
                               fontFamily: 'NotoSerifKR',
-                              fontSize: 22, fontWeight: FontWeight.bold,
+                              fontSize: 28, fontWeight: FontWeight.bold,
                               color: Colors.white, letterSpacing: 4,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         const Text(
-                          '명리 입력',
+                          '나에게 맞는 동네와 집을 찾아드립니다',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontFamily: 'NotoSerifKR',
-                            fontSize: 13, color: AppColors.textSecondary,
-                            letterSpacing: 2,
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            letterSpacing: 0.5,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -201,15 +225,6 @@ class _InputScreenState extends State<InputScreen> {
                           Container(width: 30, height: 0.5,
                               color: AppColors.accent.withOpacity(0.4)),
                         ]),
-                        const SizedBox(height: 8),
-                        Text(
-                          '생년월일시로 나의 부동산 천명을 확인합니다',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary.withOpacity(0.8),
-                            letterSpacing: 0.5,
-                          ),
-                        ),
                       ]),
                     )
                     .animate(delay: 100.ms).fadeIn().slideY(begin: 0.15),
@@ -223,7 +238,7 @@ class _InputScreenState extends State<InputScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _fieldLabel('姓名', '성명 (이름 또는 닉네임)'),
+                          _fieldLabel('이름', '성명 (이름 또는 닉네임)'),
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: _nameCtrl,
@@ -253,7 +268,7 @@ class _InputScreenState extends State<InputScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _fieldLabel('生年月日', '생년월일'),
+                              _fieldLabel('생년월일', ''),
                               Row(children: [
                                 _calTypeBtn('양력', '陽曆', false),
                                 const SizedBox(width: 4),
@@ -325,7 +340,7 @@ class _InputScreenState extends State<InputScreen> {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    '윤달 (閏月)',
+                                    '윤달',
                                     style: TextStyle(
                                       fontFamily: 'NotoSerifKR',
                                       fontSize: 12,
@@ -366,7 +381,7 @@ class _InputScreenState extends State<InputScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _fieldLabel('性別', '성별'),
+                          _fieldLabel('성별', ''),
                           const SizedBox(height: 10),
                           Row(children: [
                             _genderBtn('남', '乾', '하늘·양(陽)'),
@@ -387,7 +402,7 @@ class _InputScreenState extends State<InputScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(children: [
-                            Expanded(child: _fieldLabel('時辰', '태어난 시각')),
+                            Expanded(child: _fieldLabel('태어난 시각', '')),
                             // 모름 체크박스
                             GestureDetector(
                               onTap: () => setState(() => _unknownHour = !_unknownHour),
@@ -520,7 +535,7 @@ class _InputScreenState extends State<InputScreen> {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  '원광식 진태양시 보정 (眞太陽時)',
+                                  '원광식 진태양시 보정',
                                   style: TextStyle(
                                     fontFamily: 'NotoSerifKR',
                                     fontSize: 12,
@@ -640,12 +655,12 @@ class _InputScreenState extends State<InputScreen> {
                             padding: EdgeInsets.symmetric(vertical: 18),
                             child: Center(
                               child: Text(
-                                '天 命 分 析 開 始',
+                                '부동산 사주 분석 시작하기',
                                 style: TextStyle(
                                   fontFamily: 'NotoSerifKR',
                                   fontSize: 16, fontWeight: FontWeight.bold,
                                   color: Color(0xFF1A0804),
-                                  letterSpacing: 4,
+                                  letterSpacing: 2,
                                 ),
                               ),
                             ),
@@ -693,23 +708,25 @@ class _InputScreenState extends State<InputScreen> {
     );
   }
 
-  Widget _fieldLabel(String hanja, String korean) => Row(children: [
+  Widget _fieldLabel(String label, String sub) => Row(children: [
     Text(
-      hanja,
+      label,
       style: const TextStyle(
         fontFamily: 'NotoSerifKR',
         fontSize: 13, fontWeight: FontWeight.bold,
-        color: AppColors.accent, letterSpacing: 1,
+        color: AppColors.accent, letterSpacing: 0.5,
       ),
     ),
-    const SizedBox(width: 8),
-    Text(
-      korean,
-      style: const TextStyle(
-        fontSize: 11, color: AppColors.textSecondary,
-        letterSpacing: 0.5,
+    if (sub.isNotEmpty) ...[
+      const SizedBox(width: 8),
+      Text(
+        sub,
+        style: const TextStyle(
+          fontSize: 11, color: AppColors.textSecondary,
+          letterSpacing: 0.5,
+        ),
       ),
-    ),
+    ],
   ]);
 
   /// 양력/음력 선택 버튼

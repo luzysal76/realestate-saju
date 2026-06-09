@@ -16,6 +16,7 @@ import '../profile/profile_select_screen.dart';
 import '../settings/settings_screen.dart';
 import 'saju_detail_screen.dart';
 import 'shinsal_card.dart';
+import 'daily_fortune_card.dart';
 import '../location/location_card.dart';
 import '../share/share_card.dart';
 import '../share/floor_unit_screen.dart';
@@ -106,6 +107,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildTodayCard(),
               const SizedBox(height: 8),
               _buildQuickStats(),
+              const SizedBox(height: 10),
+              DailyFortuneSection(result: _result, profile: widget.profile),
               const SizedBox(height: 10),
               _buildSajuPillar(),
               const SizedBox(height: 10),
@@ -613,7 +616,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         doubleBorder: true,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const KoreanSectionTitle(title: '사주팔자 (四柱八字)', showDivider: false),
+            const KoreanSectionTitle(title: '사주팔자', showDivider: false),
             const Spacer(),
             Text('상세 ›', style: TextStyle(
               fontSize: 11, color: AppColors.accent.withOpacity(0.8),
@@ -694,7 +697,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return TraditionalCard(
       doubleBorder: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const KoreanSectionTitle(title: '십성 분석 (十星)'),
+        const KoreanSectionTitle(title: '십성 분석'),
         const SizedBox(height: 12),
         Row(children: [
           // 격국 뱃지
@@ -976,7 +979,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const KoreanSectionTitle(
-            title: '세운 — 연도별 운세 (歲運)',
+            title: '세운 — 연도별 운세',
             subtitle: '가까운 6년간 부동산 흐름',
             showDivider: false,
           ),
@@ -1061,7 +1064,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const KoreanSectionTitle(title: '천명 메뉴 (天命)'),
+      const KoreanSectionTitle(title: '부동산 메뉴'),
       const SizedBox(height: 10),
       GridView.count(
         shrinkWrap: true,

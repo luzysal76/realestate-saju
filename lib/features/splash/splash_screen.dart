@@ -147,30 +147,30 @@ class _SplashScreenState extends State<SplashScreen>
 
                 const SizedBox(height: 36),
 
-                // 한자 제목
+                // 타이틀
                 Column(children: [
-                  // 한자 큰 글씨
+                  // 메인 타이틀 (한글)
                   ShaderMask(
                     shaderCallback: (b) => AppColors.goldGradient.createShader(b),
                     child: const Text(
-                      '不動産四柱',
+                      '부동산 사주',
                       style: TextStyle(
                         fontFamily: 'NotoSerifKR',
-                        fontSize: 28, fontWeight: FontWeight.bold,
+                        fontSize: 32, fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        letterSpacing: 6,
+                        letterSpacing: 5,
                       ),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // 한글 부제
+                  // 서브타이틀
                   Text(
-                    '부동산 사주',
+                    '나에게 맞는 동네와 집을 찾아드립니다',
                     style: TextStyle(
                       fontFamily: 'NotoSerifKR',
-                      fontSize: 18,
-                      color: AppColors.textPrimary.withOpacity(0.9),
-                      letterSpacing: 4,
+                      fontSize: 13,
+                      color: AppColors.textPrimary.withOpacity(0.75),
+                      letterSpacing: 1,
                     ),
                   ),
                 ])
@@ -193,7 +193,7 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 14),
 
                 Text(
-                  '천명(天命)으로 보는 나의 부동산 운세',
+                  '사주 기반 라이프스타일 주거 추천',
                   style: TextStyle(
                     fontFamily: 'NotoSerifKR',
                     fontSize: 13,

@@ -104,7 +104,7 @@ class _ProfileSelectScreenState extends State<ProfileSelectScreen> {
                 const SizedBox(height: 14),
                 ShaderMask(
                   shaderCallback: (b) => AppColors.goldGradient.createShader(b),
-                  child: const Text('命理 選擇',
+                  child: const Text('프로필 선택',
                     style: TextStyle(
                       fontFamily: 'NotoSerifKR',
                       fontSize: 22, fontWeight: FontWeight.bold,

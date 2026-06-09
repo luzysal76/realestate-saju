@@ -25,7 +25,7 @@ class TimingScreen extends StatelessWidget {
       appBar: AppBar(
         title: ShaderMask(
           shaderCallback: (b) => AppColors.goldGradient.createShader(b),
-          child: const Text('賣買 타이밍',
+          child: const Text('매매 타이밍',
             style: TextStyle(fontFamily: 'NotoSerifKR',
               fontSize: 18, color: Colors.white, letterSpacing: 3)),
         ),
@@ -94,7 +94,7 @@ class TimingScreen extends StatelessWidget {
         Row(children: [
           KoreanSectionTitle(
             title: '$year년 올해 운세',
-            subtitle: '세운(歲運) 기준 분석',
+            subtitle: '세운 기준 분석',
             showDivider: false,
           ),
           const Spacer(),
@@ -195,7 +195,7 @@ class TimingScreen extends StatelessWidget {
       doubleBorder: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const KoreanSectionTitle(
-          title: '세운(歲運) 투자지수 차트',
+          title: '세운 투자지수 차트',
           subtitle: '연도별 부동산 운세 점수 (0~100)',
         ),
         const SizedBox(height: 16),
@@ -380,7 +380,7 @@ class TimingScreen extends StatelessWidget {
       doubleBorder: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const KoreanSectionTitle(
-          title: '대운별 부동산 전략 (大運)',
+          title: '대운별 부동산 전략',
           subtitle: '10년 단위 운세 흐름',
         ),
         const SizedBox(height: 12),
