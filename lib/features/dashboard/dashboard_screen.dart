@@ -611,10 +611,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               String ssLabel = '일간';
               Color ssColor = AppColors.accent;
+              String? jijiSsLabel;
+              Color? jijiSsColor;
+
               if (idx != 2) {
+                // 천간 십성
                 final ss = SajuCalculator.calcSipSeong(ilgan, cg);
                 ssLabel = ss.name;
                 ssColor = _sipSeongColor(ss.name);
+                // 지지 십성 (주기 기준)
+                final jijiStr = data['jiji']!;
+                final mainCg = SajuCalculator.jijiMainCg[jijiStr];
+                if (mainCg != null) {
+                  final jijiSs = SajuCalculator.calcSipSeong(ilgan, mainCg);
+                  jijiSsLabel = jijiSs.name;
+                  jijiSsColor = _sipSeongColor(jijiSs.name);
+                }
               }
 
               return PillarCard(
@@ -624,6 +636,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: color,
                 sipSeongLabel: ssLabel,
                 sipSeongColor: ssColor,
+                jijiSipSeongLabel: jijiSsLabel,
+                jijiSipSeongColor: jijiSsColor,
               );
             }).toList(),
           ),

@@ -239,8 +239,10 @@ class PillarCard extends StatelessWidget {
   final String jiji;
   final String label;
   final Color color;
-  final String? sipSeongLabel;
+  final String? sipSeongLabel;      // 천간 십성
   final Color? sipSeongColor;
+  final String? jijiSipSeongLabel;  // 지지 십성
+  final Color? jijiSipSeongColor;
 
   const PillarCard({
     super.key,
@@ -250,6 +252,8 @@ class PillarCard extends StatelessWidget {
     required this.color,
     this.sipSeongLabel,
     this.sipSeongColor,
+    this.jijiSipSeongLabel,
+    this.jijiSipSeongColor,
   });
 
   @override
@@ -294,7 +298,7 @@ class PillarCard extends StatelessWidget {
         ]),
       ),
       const SizedBox(height: 5),
-      // 십성 뱃지
+      // 천간 십성 뱃지
       if (sipSeongLabel != null)
         SipSeongBadge(
           name: sipSeongLabel!,
@@ -314,6 +318,15 @@ class PillarCard extends StatelessWidget {
             fontFamily: 'NotoSerifKR', letterSpacing: 0.5,
           )),
         ),
+      // 지지 십성 뱃지 (주기 기준)
+      if (jijiSipSeongLabel != null) ...[
+        const SizedBox(height: 2),
+        SipSeongBadge(
+          name: jijiSipSeongLabel!,
+          color: jijiSipSeongColor ?? AppColors.textSecondary,
+          small: true,
+        ),
+      ],
     ]);
   }
 }
