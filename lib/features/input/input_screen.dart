@@ -109,6 +109,7 @@ class _InputScreenState extends State<InputScreen> {
       birthHour: _unknownHour ? 25 : _birthHour,
       birthMinute: _unknownHour ? 0 : _birthMinute,
       birthLongitude: cityLon,
+      birthCity: _birthCity,
       gender: _gender,
     );
 

@@ -16,6 +16,9 @@ import '../profile/profile_select_screen.dart';
 import '../settings/settings_screen.dart';
 import 'saju_detail_screen.dart';
 import 'shinsal_card.dart';
+import '../location/location_card.dart';
+import '../share/share_card.dart';
+import '../share/floor_unit_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -53,7 +56,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               backgroundColor: AppColors.surface,
               flexibleSpace: FlexibleSpaceBar(background: _buildHeader()),
               actions: [
-                // 공유 버튼
+                // 공유 카드 버튼
+                IconButton(
+                  icon: const Icon(Icons.card_giftcard_outlined, size: 20),
+                  tooltip: 'SNS 공유 카드',
+                  onPressed: () => ShareCardUtil.shareCard(
+                    context: context,
+                    result: _result,
+                    name: widget.profile.name,
+                    cardType: 'direction',
+                  ),
+                ),
+                // 텍스트 공유 버튼
                 IconButton(
                   icon: const Icon(Icons.share_outlined, size: 20),
                   tooltip: '사주 공유',
@@ -95,6 +109,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildOehaengBar(),
               const SizedBox(height: 10),
               _buildPropertyCard(),
+              const SizedBox(height: 10),
+              _buildLocationCard(),
               const SizedBox(height: 10),
               _buildDaeWunCard(),
               const SizedBox(height: 10),
@@ -523,7 +539,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${widget.profile.birthDate.year}년생  ${widget.profile.gender}성',
+                    '${widget.profile.birthDate.year}년생  ${widget.profile.gender}성'
+                    '${widget.profile.birthCity != null ? '  📍${widget.profile.birthCity}' : ''}',
                     style: const TextStyle(
                       fontSize: 11, color: AppColors.textSecondary,
                       letterSpacing: 0.5,
@@ -872,6 +889,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.1);
   }
 
+  // ─── 입지 추천 카드 ─────────────────────────────────
+
+  Widget _buildLocationCard() {
+    return LocationRecommendCard(result: _result);
+  }
+
   // ─── 현재 대운 ───────────────────────────────────
 
   Widget _buildDaeWunCard() {
@@ -1016,6 +1039,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
        'screen': DirectionScreen(result: _result)},
       {'label': '賣買', 'title': '매매 타이밍', 'sub': '운세 분석',
        'screen': TimingScreen(result: _result, profile: widget.profile)},
+      {'label': '層數', 'title': '층수·호수', 'sub': '궁합 분석',
+       'screen': FloorUnitScreen(result: _result, name: widget.profile.name)},
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1024,9 +1049,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       GridView.count(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 3,
-        crossAxisSpacing: 8, mainAxisSpacing: 8,
-        childAspectRatio: 0.9,
+        crossAxisCount: 4,
+        crossAxisSpacing: 6, mainAxisSpacing: 6,
+        childAspectRatio: 0.82,
         children: actions.asMap().entries.map((e) {
           final idx = e.key;
           final a = e.value;

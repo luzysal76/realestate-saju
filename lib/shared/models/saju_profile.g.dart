@@ -24,13 +24,14 @@ class SajuProfileAdapter extends TypeAdapter<SajuProfile> {
       createdAt: fields[4] as DateTime,
       birthMinute: fields[5] as int? ?? 0,           // 신규 (기존 데이터 호환)
       birthLongitude: fields[6] as double?,           // 신규 (기존 데이터 null)
+      birthCity: fields[7] as String?,               // 신규 (기존 데이터 null)
     );
   }
 
   @override
   void write(BinaryWriter writer, SajuProfile obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class SajuProfileAdapter extends TypeAdapter<SajuProfile> {
       ..writeByte(5)
       ..write(obj.birthMinute)
       ..writeByte(6)
-      ..write(obj.birthLongitude);
+      ..write(obj.birthLongitude)
+      ..writeByte(7)
+      ..write(obj.birthCity);
   }
 
   @override

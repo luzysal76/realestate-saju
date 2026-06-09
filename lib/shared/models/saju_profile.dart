@@ -25,6 +25,9 @@ class SajuProfile extends HiveObject {
   @HiveField(6)
   double? birthLongitude; // 진태양시 보정용 경도 (null = 보정 없음)
 
+  @HiveField(7)
+  String? birthCity; // 태어난 도시 (예: '서울', '부산')
+
   SajuProfile({
     required this.name,
     required this.birthDate,
@@ -33,6 +36,7 @@ class SajuProfile extends HiveObject {
     DateTime? createdAt,
     this.birthMinute = 0,
     this.birthLongitude,
+    this.birthCity,
   }) : createdAt = createdAt ?? DateTime.now();
 
   String get birthHourLabel {
