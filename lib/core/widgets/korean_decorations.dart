@@ -482,20 +482,4 @@ class _TaegeukPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ─── 세운 점수 색상 헬퍼 ─────────────────────────────
-
-Color getScoreColor(int score) {
-  if (score >= 80) return const Color(0xFFCC3300); // 단청 적 — 대길
-  if (score >= 65) return const Color(0xFFC08010); // 황금 — 길
-  if (score >= 50) return const Color(0xFF2E7D5A); // 녹청 — 평길
-  if (score >= 35) return AppColors.textSecondary;
-  return const Color(0xFF5A5A6A); // 회색 — 주의
-}
-
-String getScoreKorean(int score) {
-  if (score >= 80) return '대길 (大吉)';
-  if (score >= 65) return '길 (吉)';
-  if (score >= 50) return '평길 (平吉)';
-  if (score >= 35) return '보통 (普通)';
-  return '주의 (注意)';
-}
+// getScoreColor / getScoreKorean → chart_widgets.dart 로 이동

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
+import '../../core/widgets/chart_widgets.dart';
 import '../../core/saju/saju_calculator.dart';
 import '../../shared/models/saju_profile.dart';
 

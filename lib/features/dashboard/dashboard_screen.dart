@@ -23,6 +23,8 @@ import '../share/floor_unit_screen.dart';
 import '../calendar/fortune_calendar_screen.dart';
 import '../building/building_compat_screen.dart';
 import '../map/fortune_map_screen.dart';
+import '../family/family_deed_screen.dart';
+import '../../core/widgets/chart_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -134,7 +136,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ─── 오늘 일진 히어로 카드 ────────────────────────
+  // ─── 오행 재물운 히어로 카드 (2.0 다크 럭셔리) ─────
 
   Widget _buildTodayCard() {
     final today = DateTime.now();
@@ -151,127 +153,146 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final score = _getTodayScore(ss.name, jijiRelation, isGongmang);
 
     return GestureDetector(
-      onTap: () => _showTodayDetail(context, cg, ji, oe, ss, jijiRelation, isGongmang, color),
+      onTap: () => _showTodayDetail(
+        context, cg, ji, oe, ss, jijiRelation, isGongmang, color),
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color.lerp(AppColors.cardBg, color, 0.18)!,
-              Color.lerp(AppColors.cardBg, AppColors.surface, 0.35)!,
-            ],
-          ),
+          color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.35)),
+          border: Border.all(color: AppColors.accent.withOpacity(0.25)),
           boxShadow: [BoxShadow(
-            color: color.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 4),
+            color: AppColors.accent.withOpacity(0.08),
+            blurRadius: 24, offset: const Offset(0, 6),
           )],
         ),
         child: Stack(children: [
-          // 배경 광원
-          Positioned(
-            top: -30, right: -30,
+          // 배경 글로우 (좌상단)
+          Positioned(top: -40, left: -40,
+            child: Container(
+              width: 160, height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accent.withOpacity(0.04)),
+            ),
+          ),
+          // 배경 글로우 (우하단)
+          Positioned(bottom: -30, right: -30,
             child: Container(
               width: 120, height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withOpacity(0.07),
-              ),
+                color: color.withOpacity(0.05)),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // ── 라벨 ──
-              Row(children: [
-                Container(width: 14, height: 1, color: AppColors.accent),
-                const SizedBox(width: 6),
-                Text('오늘의 부동산 일진', style: TextStyle(
-                  fontSize: 10, color: AppColors.accent, letterSpacing: 2)),
-              ]),
-              const SizedBox(height: 12),
-              // ── 메인 영역 ──
-              Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                // 간지 박스
-                Container(
-                  width: 60, height: 68,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withOpacity(0.45)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── 상단 레이블 ──
+                Row(children: [
+                  Container(width: 3, height: 14,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(1.5),
+                      boxShadow: [BoxShadow(
+                        color: AppColors.accent.withOpacity(0.6),
+                        blurRadius: 6)],
+                    ),
                   ),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(cg, style: TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 22, fontWeight: FontWeight.bold, color: color,
-                      shadows: [Shadow(color: color.withOpacity(0.5), blurRadius: 8)],
+                  const SizedBox(width: 8),
+                  ShaderMask(
+                    shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+                    child: const Text('오행 재물운 분석', style: TextStyle(
+                      fontFamily: 'NotoSerifKR', fontSize: 11,
+                      fontWeight: FontWeight.bold, color: Colors.white,
+                      letterSpacing: 2)),
+                  ),
+                  const Spacer(),
+                  Text('Real Estate Saju 2.0', style: TextStyle(
+                    fontSize: 9, color: AppColors.accent.withOpacity(0.5),
+                    letterSpacing: 1)),
+                ]),
+                const SizedBox(height: 16),
+                // ── 메인 영역: 레이더 + 게이지 ──
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // 오각형 레이더
+                    OhaengRadarWidget(
+                      scores: _result.oehaengScore, size: 158),
+                    // 세로 구분선
+                    Container(
+                      width: 1, height: 120,
+                      color: AppColors.divider),
+                    // 반원 게이지
+                    SemiCircleGauge(score: score, width: 148),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // ── 하단 일진 스트립 ──
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: color.withOpacity(0.25)),
+                  ),
+                  child: Row(children: [
+                    // 오늘 일진
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: color.withOpacity(0.35)),
+                      ),
+                      child: Text('$cg$ji', style: TextStyle(
+                        fontFamily: 'NotoSerifKR', fontSize: 16,
+                        fontWeight: FontWeight.bold, color: color,
+                        shadows: [Shadow(color: color.withOpacity(0.5), blurRadius: 6)],
+                        letterSpacing: 2)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Text(verdict.emoji, style: const TextStyle(fontSize: 11)),
+                          const SizedBox(width: 4),
+                          Expanded(child: Text(verdict.label, style: const TextStyle(
+                            fontFamily: 'NotoSerifKR', fontSize: 11,
+                            fontWeight: FontWeight.bold, color: AppColors.textPrimary,
+                            letterSpacing: 0.3),
+                            maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        ]),
+                        const SizedBox(height: 2),
+                        Wrap(spacing: 4, children: [
+                          SipSeongBadge(name: ss.name,
+                            color: _sipSeongColorFor(ss.name), small: true),
+                          if (isGongmang) _miniTag('공망', AppColors.hwaColor),
+                          if (jijiRelation.isNotEmpty) _miniTag(jijiRelation,
+                            jijiRelation.contains('합') ? AppColors.mokColor : AppColors.hwaColor),
+                        ]),
+                      ],
                     )),
-                    Container(width: 28, height: 0.5,
-                      margin: const EdgeInsets.symmetric(vertical: 3),
-                      color: color.withOpacity(0.4)),
-                    Text(ji, style: const TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 22, fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary)),
+                    const SizedBox(width: 6),
+                    // 상세 버튼
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+                      ),
+                      child: const Text('상세 ›', style: TextStyle(
+                        fontSize: 9, color: AppColors.accent, letterSpacing: 0.5)),
+                    ),
                   ]),
                 ),
-                const SizedBox(width: 12),
-                // 판정 내용
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Text(verdict.emoji, style: const TextStyle(fontSize: 13)),
-                      const SizedBox(width: 5),
-                      Expanded(child: Text(verdict.label, style: const TextStyle(
-                        fontFamily: 'NotoSerifKR',
-                        fontSize: 12, fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary, letterSpacing: 0.3,
-                      ), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    ]),
-                    const SizedBox(height: 5),
-                    Wrap(spacing: 4, runSpacing: 4, children: [
-                      SipSeongBadge(name: ss.name,
-                        color: _sipSeongColorFor(ss.name), small: true),
-                      if (isGongmang) _miniTag('공망', AppColors.hwaColor),
-                      if (jijiRelation.isNotEmpty)
-                        _miniTag(jijiRelation,
-                          jijiRelation.contains('합') ? AppColors.mokColor : AppColors.hwaColor),
-                    ]),
-                    const SizedBox(height: 6),
-                    Text(verdict.tip, style: const TextStyle(
-                      fontSize: 10, color: AppColors.textSecondary, height: 1.4),
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ],
-                )),
-                const SizedBox(width: 8),
-                // 점수 숫자
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text('$score', style: TextStyle(
-                    fontFamily: 'NotoSerifKR',
-                    fontSize: 42, fontWeight: FontWeight.w900,
-                    color: _scoreColorForToday(score), height: 1,
-                    shadows: [Shadow(
-                      color: _scoreColorForToday(score).withOpacity(0.4),
-                      blurRadius: 12)],
-                  )),
-                  Text('TODAY', style: TextStyle(
-                    fontSize: 8,
-                    color: _scoreColorForToday(score).withOpacity(0.7),
-                    letterSpacing: 2)),
-                ]),
-              ]),
-              const SizedBox(height: 10),
-              // ── 하단 날짜 ──
-              Row(children: [
-                Text('${today.month}월 ${today.day}일',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-                const Spacer(),
-                const Text('상세 ›',
-                  style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
-              ]),
-            ]),
+              ],
+            ),
           ),
         ]),
       ),
@@ -1055,12 +1076,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
        'screen': TimingScreen(result: _result, profile: widget.profile)},
       {'label': '層數', 'title': '층수·호수', 'sub': '궁합 분석',
        'screen': FloorUnitScreen(result: _result, name: widget.profile.name)},
-      {'label': '曆', 'title': '운세 캘린더', 'sub': '일진 분석', 'isNew': true,
+      {'label': '曆', 'title': '운세 캘린더', 'sub': '일진 분석', 'isNew': false,
        'screen': FortuneCalendarScreen(result: _result, profile: widget.profile)},
-      {'label': '建物', 'title': '건물 궁합', 'sub': '준공일 분석', 'isNew': true,
+      {'label': '建物', 'title': '건물 궁합', 'sub': '준공일 분석', 'isNew': false,
        'screen': BuildingCompatScreen(result: _result, profile: widget.profile)},
-      {'label': '地圖', 'title': '입지 히트맵', 'sub': '자치구 분석', 'isNew': true,
+      {'label': '地圖', 'title': '입지 히트맵', 'sub': '자치구 분석', 'isNew': false,
        'screen': FortuneMapScreen(result: _result, profile: widget.profile)},
+      {'label': '名義', 'title': '명의 궁합', 'sub': '공동명의 분석', 'isNew': true,
+       'screen': FamilyDeedScreen(resultA: _result, profileA: widget.profile)},
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
