@@ -101,6 +101,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
             children: [
               _buildTodayCard(),
+              const SizedBox(height: 8),
+              _buildQuickStats(),
               const SizedBox(height: 10),
               _buildSajuPillar(),
               const SizedBox(height: 10),
@@ -126,7 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ─── 오늘 일진 카드 ──────────────────────────────
+  // ─── 오늘 일진 히어로 카드 ────────────────────────
 
   Widget _buildTodayCard() {
     final today = DateTime.now();
@@ -135,129 +137,134 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final ji = todayGj['jiji']!;
     final oe = todayGj['oehaeng_cheongan']!;
     final color = AppColors.getOehaengColor(oe);
-
-    // 일간 기준 오늘 십성
     final ss = SajuCalculator.calcSipSeong(_result.ilgan, cg);
-
-    // 오늘 공망 여부
     final gongmang = _result.shinSalResult.gongmang;
     final isGongmang = gongmang.contains(ji);
-
-    // 일지 합충 체크
     final jijiRelation = _getJijiRelation(_result.ilji, ji);
-
-    // 오늘 점수
     final verdict = _getTodayVerdict(ss.name, jijiRelation, isGongmang);
+    final score = _getTodayScore(ss.name, jijiRelation, isGongmang);
 
     return GestureDetector(
       onTap: () => _showTodayDetail(context, cg, ji, oe, ss, jijiRelation, isGongmang, color),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: verdict.borderColor),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.lerp(AppColors.cardBg, color, 0.18)!,
+              Color.lerp(AppColors.cardBg, AppColors.surface, 0.35)!,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.35)),
           boxShadow: [BoxShadow(
-            color: verdict.borderColor.withOpacity(0.2),
-            blurRadius: 8, offset: const Offset(0, 2),
+            color: color.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 4),
           )],
         ),
         child: Stack(children: [
-          Positioned.fill(child: Container(
-            margin: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: verdict.borderColor.withOpacity(0.15), width: 0.5),
+          // 배경 광원
+          Positioned(
+            top: -30, right: -30,
+            child: Container(
+              width: 120, height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withOpacity(0.07),
+              ),
             ),
-          )),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(children: [
-              // 오늘 날짜 + 간지
-              Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                Text('오늘', style: const TextStyle(
-                  fontSize: 9, color: AppColors.textSecondary, letterSpacing: 1)),
-                const SizedBox(height: 3),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // ── 라벨 ──
+              Row(children: [
+                Container(width: 14, height: 1, color: AppColors.accent),
+                const SizedBox(width: 6),
+                Text('오늘의 부동산 일진', style: TextStyle(
+                  fontSize: 10, color: AppColors.accent, letterSpacing: 2)),
+              ]),
+              const SizedBox(height: 12),
+              // ── 메인 영역 ──
+              Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                // 간지 박스
                 Container(
-                  width: 52, height: 56,
+                  width: 60, height: 68,
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: color.withOpacity(0.4)),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: color.withOpacity(0.45)),
                   ),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text(cg, style: TextStyle(
                       fontFamily: 'NotoSerifKR',
-                      fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-                    Container(height: 0.5, margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      color: color.withOpacity(0.3)),
+                      fontSize: 22, fontWeight: FontWeight.bold, color: color,
+                      shadows: [Shadow(color: color.withOpacity(0.5), blurRadius: 8)],
+                    )),
+                    Container(width: 28, height: 0.5,
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      color: color.withOpacity(0.4)),
                     Text(ji, style: const TextStyle(
                       fontFamily: 'NotoSerifKR',
-                      fontSize: 18, fontWeight: FontWeight.bold,
+                      fontSize: 22, fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary)),
                   ]),
                 ),
-                const SizedBox(height: 3),
-                Text('${today.month}/${today.day}', style: const TextStyle(
-                  fontSize: 9, color: AppColors.textSecondary)),
-              ]),
-
-              const SizedBox(width: 14),
-
-              // 운세 내용
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Text(verdict.emoji, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 6),
-                    ShaderMask(
-                      shaderCallback: (b) => LinearGradient(
-                        colors: [verdict.borderColor, verdict.borderColor.withOpacity(0.7)],
-                      ).createShader(b),
-                      child: Text(verdict.label, style: const TextStyle(
+                const SizedBox(width: 12),
+                // 판정 내용
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Text(verdict.emoji, style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 5),
+                      Expanded(child: Text(verdict.label, style: const TextStyle(
                         fontFamily: 'NotoSerifKR',
-                        fontSize: 13, fontWeight: FontWeight.bold,
-                        color: Colors.white, letterSpacing: 0.5,
-                      )),
-                    ),
-                    if (isGongmang) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.hwaColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(2),
-                          border: Border.all(color: AppColors.hwaColor.withOpacity(0.4)),
-                        ),
-                        child: const Text('공망', style: TextStyle(
-                          fontSize: 8, color: AppColors.hwaColor,
-                          fontWeight: FontWeight.bold, letterSpacing: 0.3)),
-                      ),
-                    ],
-                  ]),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    SipSeongBadge(name: ss.name, color: _sipSeongColorFor(ss.name), small: true),
-                    const SizedBox(width: 6),
-                    if (jijiRelation.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(2),
-                          border: Border.all(color: AppColors.divider, width: 0.5),
-                        ),
-                        child: Text('일지와 $jijiRelation', style: const TextStyle(
-                          fontSize: 9, color: AppColors.textSecondary)),
-                      ),
-                  ]),
-                  const SizedBox(height: 6),
-                  Text(verdict.tip, style: const TextStyle(
-                    fontSize: 11, color: AppColors.textPrimary, height: 1.4)),
-                ],
-              )),
-
-              const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+                        fontSize: 12, fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary, letterSpacing: 0.3,
+                      ), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    ]),
+                    const SizedBox(height: 5),
+                    Wrap(spacing: 4, runSpacing: 4, children: [
+                      SipSeongBadge(name: ss.name,
+                        color: _sipSeongColorFor(ss.name), small: true),
+                      if (isGongmang) _miniTag('공망', AppColors.hwaColor),
+                      if (jijiRelation.isNotEmpty)
+                        _miniTag(jijiRelation,
+                          jijiRelation.contains('합') ? AppColors.mokColor : AppColors.hwaColor),
+                    ]),
+                    const SizedBox(height: 6),
+                    Text(verdict.tip, style: const TextStyle(
+                      fontSize: 10, color: AppColors.textSecondary, height: 1.4),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                )),
+                const SizedBox(width: 8),
+                // 점수 숫자
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text('$score', style: TextStyle(
+                    fontFamily: 'NotoSerifKR',
+                    fontSize: 42, fontWeight: FontWeight.w900,
+                    color: _scoreColorForToday(score), height: 1,
+                    shadows: [Shadow(
+                      color: _scoreColorForToday(score).withOpacity(0.4),
+                      blurRadius: 12)],
+                  )),
+                  Text('TODAY', style: TextStyle(
+                    fontSize: 8,
+                    color: _scoreColorForToday(score).withOpacity(0.7),
+                    letterSpacing: 2)),
+                ]),
+              ]),
+              const SizedBox(height: 10),
+              // ── 하단 날짜 ──
+              Row(children: [
+                Text('${today.month}월 ${today.day}일',
+                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                const Spacer(),
+                const Text('상세 ›',
+                  style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+              ]),
             ]),
           ),
         ]),
@@ -889,10 +896,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.1);
   }
 
-  // ─── 입지 추천 카드 ─────────────────────────────────
+  // ─── 입지 추천 가로 스크롤 ──────────────────────────
 
   Widget _buildLocationCard() {
-    return LocationRecommendCard(result: _result);
+    return TraditionalCard(
+      doubleBorder: true,
+      child: LocationScrollCard(result: _result),
+    ).animate(delay: 310.ms).fadeIn().slideY(begin: 0.1);
   }
 
   // ─── 현재 대운 ───────────────────────────────────
@@ -952,7 +962,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ).animate(delay: 370.ms).fadeIn().slideY(begin: 0.1);
   }
 
-  // ─── 세운 (연도별 운세) ──────────────────────────
+  // ─── 세운 (연도별 운세) — 컴팩트 테이블 ────────────
 
   Widget _buildSeWunCard() {
     final seWunList = _result.seWunList;
@@ -961,63 +971,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return TraditionalCard(
       doubleBorder: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const KoreanSectionTitle(
-          title: '세운 — 연도별 운세 (歲運)',
-          subtitle: '가까운 6년간 부동산 흐름',
-        ),
-        const SizedBox(height: 12),
+        Row(children: [
+          const KoreanSectionTitle(
+            title: '세운 — 연도별 운세 (歲運)',
+            subtitle: '가까운 6년간 부동산 흐름',
+            showDivider: false,
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => TimingScreen(result: _result, profile: widget.profile))),
+            child: Text('더보기 ›', style: TextStyle(
+              fontSize: 11, color: AppColors.accent.withOpacity(0.8))),
+          ),
+        ]),
+        Container(height: 1, margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: const BoxDecoration(gradient: LinearGradient(
+            colors: [AppColors.accent, Colors.transparent]))),
         ...seWunList.take(6).map((sw) {
           final color = AppColors.getOehaengColor(sw.oehaeng);
           final ssColor = _sipSeongColor(sw.sipSeong.name);
           final isNow = sw.year == DateTime.now().year;
           return Container(
-            margin: const EdgeInsets.only(bottom: 7),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: isNow ? color.withOpacity(0.1) : AppColors.surface.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(4),
+              color: isNow
+                ? color.withOpacity(0.1)
+                : AppColors.surface.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isNow ? color.withOpacity(0.5) : AppColors.divider,
-                width: isNow ? 1.5 : 0.8,
+                color: isNow ? color.withOpacity(0.4) : AppColors.divider.withOpacity(0.5),
+                width: isNow ? 1 : 0.5,
               ),
             ),
             child: Row(children: [
-              SizedBox(width: 48, child: Column(
+              SizedBox(width: 44, child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('${sw.year}', style: TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.bold,
+                    fontSize: 11, fontWeight: FontWeight.bold,
                     color: isNow ? color : AppColors.textPrimary)),
                   Text(sw.ganJiStr, style: TextStyle(
-                    fontFamily: 'NotoSerifKR', fontSize: 11, color: color)),
+                    fontFamily: 'NotoSerifKR', fontSize: 10, color: color)),
                 ],
               )),
-              const SizedBox(width: 6),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SipSeongBadge(name: sw.sipSeong.name, color: ssColor, small: true),
-                const SizedBox(height: 2),
-                Text(sw.jijiRelation, style: const TextStyle(
-                  fontSize: 9, color: AppColors.textSecondary)),
-              ]),
-              const SizedBox(width: 6),
+              SipSeongBadge(name: sw.sipSeong.name, color: ssColor, small: true),
+              const SizedBox(width: 8),
               Expanded(child: Text(sw.buyOrSell, style: const TextStyle(
-                fontSize: 11, color: AppColors.textPrimary, height: 1.3))),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(sw.scoreLabel, style: const TextStyle(
-                  fontSize: 9, color: AppColors.textSecondary)),
-                Text('${sw.investmentScore}', style: TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.bold,
-                  color: getScoreColor(sw.investmentScore))),
-              ]),
+                fontSize: 10, color: AppColors.textSecondary, height: 1.2))),
+              Text('${sw.investmentScore}', style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold,
+                color: getScoreColor(sw.investmentScore))),
             ]),
           );
         }),
-        if (seWunList.length > 6)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text('나머지 ${seWunList.length - 6}년은 매매타이밍 메뉴에서 확인하세요.',
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-          ),
       ]),
     ).animate(delay: 440.ms).fadeIn().slideY(begin: 0.1);
   }
@@ -1089,6 +1097,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     ]);
   }
+
+  // ─── 빠른 지표 3열 ──────────────────────────────────
+
+  Widget _buildQuickStats() {
+    final currentYear = DateTime.now().year;
+    final dw = _result.currentDaeWun(currentYear, widget.profile.birthDate.year);
+    final sw = _result.seWunList.isEmpty ? null :
+      _result.seWunList.firstWhere(
+        (s) => s.year == currentYear, orElse: () => _result.seWunList.first);
+    final oe = _result.mainOehaeng;
+    final color = AppColors.getOehaengColor(oe);
+    const dirHanja = {'목': '東', '화': '南', '토': '中', '금': '西', '수': '北'};
+
+    return Row(children: [
+      Expanded(child: _statCard(
+        icon: '🧭', label: '길한 방위',
+        value: dirHanja[oe] ?? '',
+        sub: oe,
+        color: color,
+      )),
+      const SizedBox(width: 8),
+      Expanded(child: _statCard(
+        icon: '📈', label: '대운 지수',
+        value: dw != null ? '${dw.investmentScore}' : '-',
+        sub: dw != null ? getScoreKorean(dw.investmentScore).split(' ').first : '',
+        color: dw != null ? getScoreColor(dw.investmentScore) : AppColors.textSecondary,
+      )),
+      const SizedBox(width: 8),
+      Expanded(child: _statCard(
+        icon: '⭐', label: '$currentYear년',
+        value: sw != null ? '${sw.investmentScore}' : '-',
+        sub: sw != null ? getScoreKorean(sw.investmentScore).split(' ').first : '',
+        color: sw != null ? getScoreColor(sw.investmentScore) : AppColors.textSecondary,
+      )),
+    ]).animate(delay: 80.ms).fadeIn();
+  }
+
+  Widget _statCard({
+    required String icon, required String label,
+    required String value, required String sub, required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+        boxShadow: [BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 6, offset: const Offset(0, 2),
+        )],
+      ),
+      child: Column(children: [
+        Text(icon, style: const TextStyle(fontSize: 18)),
+        const SizedBox(height: 3),
+        Text(label, style: const TextStyle(
+          fontSize: 9, color: AppColors.textMuted, letterSpacing: 0.5)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(
+          fontFamily: 'NotoSerifKR',
+          fontSize: 22, fontWeight: FontWeight.w900,
+          color: color,
+          shadows: [Shadow(color: color.withOpacity(0.3), blurRadius: 8)],
+        )),
+        const SizedBox(height: 2),
+        Text(sub, style: TextStyle(fontSize: 9, color: color.withOpacity(0.8))),
+      ]),
+    );
+  }
+
+  int _getTodayScore(String ssName, String jijiRel, bool isGongmang) {
+    if (isGongmang) return 28;
+    if (jijiRel == '충(沖)') return 44;
+    const scores = {
+      '정재': 88, '정관': 85, '식신': 82, '정인': 80,
+      '비견': 66, '편재': 72, '편인': 70,
+      '겁재': 52, '상관': 48, '편관': 45,
+    };
+    int base = scores[ssName] ?? 65;
+    if (jijiRel == '합(合)') base = (base + 5).clamp(0, 99);
+    return base;
+  }
+
+  Color _scoreColorForToday(int score) {
+    if (score >= 80) return const Color(0xFF4DAA72);
+    if (score >= 65) return const Color(0xFFD4A017);
+    return const Color(0xFFCC4400);
+  }
+
+  Widget _miniTag(String text, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(3),
+      border: Border.all(color: color.withOpacity(0.4)),
+    ),
+    child: Text(text, style: TextStyle(
+      fontSize: 8, color: color, fontWeight: FontWeight.bold, letterSpacing: 0.3)),
+  );
 
   // ─── 공용 헬퍼 ───────────────────────────────────
 

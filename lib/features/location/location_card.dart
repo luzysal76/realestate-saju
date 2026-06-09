@@ -389,3 +389,117 @@ class _OehaengTab extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────
+// 대시보드용 가로 스크롤 입지 카드
+// ─────────────────────────────────────────────────────
+
+class LocationScrollCard extends StatelessWidget {
+  final SajuResult result;
+  const LocationScrollCard({super.key, required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final mainOe = result.mainOehaeng;
+    final weakOe = result.weakOehaeng;
+    // 세 번째: 메인 기준 다음 상생 오행
+    const saeng = {'목': '화', '화': '토', '토': '금', '금': '수', '수': '목'};
+    final thirdOe = saeng[mainOe] ?? weakOe;
+
+    final items = [mainOe, weakOe, thirdOe];
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Container(width: 14, height: 1, color: AppColors.accent),
+        const SizedBox(width: 6),
+        const Text('맞춤 입지 추천 (立地)', style: TextStyle(
+          fontFamily: 'NotoSerifKR',
+          fontSize: 13, fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary, letterSpacing: 1,
+        )),
+        const Spacer(),
+        Text('전체 ›', style: TextStyle(
+          fontSize: 11, color: AppColors.accent.withOpacity(0.8))),
+      ]),
+      const SizedBox(height: 10),
+      SizedBox(
+        height: 148,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (_, i) {
+            final oe = items[i];
+            final data = _locationMap[oe]!;
+            final color = AppColors.getOehaengColor(oe);
+            return _LocationScrollItem(
+              data: data, color: color, isRecommended: i == 0);
+          },
+        ),
+      ),
+    ]);
+  }
+}
+
+class _LocationScrollItem extends StatelessWidget {
+  final _LocationData data;
+  final Color color;
+  final bool isRecommended;
+
+  const _LocationScrollItem({
+    required this.data, required this.color, required this.isRecommended,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 138,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: isRecommended
+          ? Color.lerp(AppColors.cardBg, color, 0.12)!
+          : AppColors.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isRecommended ? color.withOpacity(0.4) : AppColors.divider,
+          width: isRecommended ? 1.5 : 0.8,
+        ),
+        boxShadow: isRecommended ? [BoxShadow(
+          color: color.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 2),
+        )] : null,
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(data.hanja, style: TextStyle(
+            fontFamily: 'NotoSerifKR',
+            fontSize: 26, fontWeight: FontWeight.w900,
+            color: color,
+            shadows: [Shadow(color: color.withOpacity(0.4), blurRadius: 8)],
+          )),
+          if (isRecommended)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text('추천', style: TextStyle(
+                fontSize: 8, color: color, fontWeight: FontWeight.bold)),
+            ),
+        ]),
+        Text(data.direction, style: TextStyle(
+          fontFamily: 'NotoSerifKR',
+          fontSize: 11, fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary)),
+        const SizedBox(height: 4),
+        Text(data.districts.take(2).join(' · '), style: const TextStyle(
+          fontSize: 9, color: AppColors.textSecondary, height: 1.3)),
+        const Spacer(),
+        Container(height: 0.5, color: color.withOpacity(0.2)),
+        const SizedBox(height: 5),
+        Text('🗓 ${data.bestSeason}', style: const TextStyle(
+          fontSize: 9, color: AppColors.textMuted)),
+      ]),
+    );
+  }
+}
