@@ -3,6 +3,7 @@
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 // ─── 오행 레이더 차트 ─────────────────────────────────
@@ -27,12 +28,13 @@ class _RadarPainter extends CustomPainter {
 
   // 시계방향, 12시부터: 수→목→화→토→금
   static const _axes  = ['수', '목', '화', '토', '금'];
+  // 브랜드 가이드 오행 컬러 코드
   static const _colors = {
-    '수': Color(0xFF2288EE),
+    '수': Color(0xFF007AFF), // Azure Blue
     '목': Color(0xFF00A86B), // Jade Green
-    '화': Color(0xFFE84020),
-    '토': Color(0xFFD4AF37), // Antique Gold
-    '금': Color(0xFFA8B8C8),
+    '화': Color(0xFFFF4D4D), // Coral Red
+    '토': Color(0xFFFFD700), // Amber Gold
+    '금': Color(0xFFE5E5E5), // Platinum
   };
 
   @override
@@ -160,12 +162,13 @@ class SemiCircleGauge extends StatelessWidget {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             ShaderMask(
               shaderCallback: (b) => AppColors.goldGradient.createShader(b),
-              child: Text('$score', style: const TextStyle(
-                fontFamily: 'NotoSerifKR', fontSize: 38,
-                fontWeight: FontWeight.w900, color: Colors.white, height: 1)),
+              // Montserrat — 브랜드 가이드: 운세 점수 숫자 폰트
+              child: Text('$score', style: GoogleFonts.montserrat(
+                fontSize: 38, fontWeight: FontWeight.w900,
+                color: Colors.white, height: 1, letterSpacing: -1)),
             ),
             const SizedBox(height: 2),
-            Text(label, style: const TextStyle(
+            Text(label, style: GoogleFonts.montserrat(
               fontSize: 9, color: AppColors.textSecondary, letterSpacing: 1.5)),
           ]),
         ),

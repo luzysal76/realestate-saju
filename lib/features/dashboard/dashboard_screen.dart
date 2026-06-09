@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -25,7 +26,9 @@ import '../calendar/fortune_calendar_screen.dart';
 import '../building/building_compat_screen.dart';
 import '../map/fortune_map_screen.dart';
 import '../family/family_deed_screen.dart';
+import '../history/fortune_history_screen.dart';
 import '../../core/widgets/chart_widgets.dart';
+import '../../core/services/fortune_log_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -47,6 +50,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       birthMinute: widget.profile.birthMinute,
       birthLongitude: widget.profile.birthLongitude,
       gender: widget.profile.gender,
+    );
+    // 오늘 운세 자동 로그 저장
+    _saveFortuneLog();
+  }
+
+  void _saveFortuneLog() {
+    final today = DateTime.now();
+    final todayGj = SajuCalculator.dayToGanJi(today);
+    final cg = todayGj['cheongan'] ?? '';
+    final ji = todayGj['jiji'] ?? '';
+    final ss = SajuCalculator.calcSipSeong(_result.ilgan, cg);
+    final isGongmang = _result.shinSalResult.gongmang.contains(ji);
+    final jijiRel = _getJijiRelation(_result.ilji, ji);
+    final score = _getTodayScore(ss.name, jijiRel, isGongmang);
+    final seWun = _result.seWunOfYear(today.year);
+    final oeScores = _result.oehaengScore;
+    final mainOe = oeScores.entries.isEmpty
+        ? '토'
+        : oeScores.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+
+    FortuneLogService.saveLog(
+      profile: widget.profile,
+      dailyScore: score,
+      dayGanJi: cg + ji,
+      luckyDir: _result.luckyDirection,
+      mainOehaeng: mainOe,
+      seWunScore: seWun?.investmentScore ?? 0,
     );
   }
 
@@ -1085,6 +1115,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
        'screen': FortuneMapScreen(result: _result, profile: widget.profile)},
       {'label': '名義', 'title': '명의 궁합', 'sub': '공동명의 분석', 'isNew': true,
        'screen': FamilyDeedScreen(resultA: _result, profileA: widget.profile)},
+      {'label': '記錄', 'title': '운세 히스토리', 'sub': '추이 그래프', 'isNew': true,
+       'screen': FortuneHistoryScreen(profile: widget.profile)},
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1210,10 +1242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Text(label, style: const TextStyle(
           fontSize: 9, color: AppColors.textMuted, letterSpacing: 0.5)),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(
-          fontFamily: 'NotoSerifKR',
-          fontSize: 22, fontWeight: FontWeight.w900,
-          color: color,
+        Text(value, style: AppFonts.score(22, color: color).copyWith(
           shadows: [Shadow(color: color.withOpacity(0.3), blurRadius: 8)],
         )),
         const SizedBox(height: 2),

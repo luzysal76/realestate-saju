@@ -35,7 +35,7 @@ class TraditionalCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: border, width: 1),
+            border: Border.all(color: border, width: 0.5),
             boxShadow: [
               BoxShadow(
                 color: AppColors.accent.withOpacity(0.06),

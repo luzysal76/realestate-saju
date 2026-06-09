@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/services/backend_service.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isAuthLoading = false;
   String? _message;
   bool _messageIsError = false;
+  bool _notificationOn = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildAccountCard(status),
             const SizedBox(height: 10),
             _buildSyncCard(status),
+            const SizedBox(height: 10),
+            _buildNotificationCard(),
             const SizedBox(height: 10),
             _buildAppInfoCard(),
             const SizedBox(height: 16),
@@ -179,6 +183,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ]),
     ).animate(delay: 80.ms).fadeIn().slideY(begin: 0.1);
+  }
+
+  // ─── 알림 카드 ────────────────────────────────────
+
+  Widget _buildNotificationCard() {
+    return TraditionalCard(
+      doubleBorder: true,
+      padding: EdgeInsets.zero,
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+          child: Row(children: [
+            const KoreanSectionTitle(title: '알림 설정 (通報)', showDivider: false),
+          ]),
+        ),
+        Container(height: 0.5, color: AppColors.divider),
+        SwitchListTile(
+          value: _notificationOn,
+          onChanged: (v) async {
+            setState(() => _notificationOn = v);
+            if (v) {
+              await NotificationService.scheduleDailyReminder();
+              await NotificationService.showTestNotification();
+              setState(() {
+                _message = '매일 오전 8시에 운세 알림을 보내드립니다 ✨';
+                _messageIsError = false;
+              });
+            } else {
+              await NotificationService.cancelAll();
+              setState(() {
+                _message = '알림이 해제되었습니다';
+                _messageIsError = false;
+              });
+            }
+          },
+          title: const Text('매일 운세 알림', style: TextStyle(
+            fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+          subtitle: const Text('오전 8시에 오늘의 부동산 운세를 알려드립니다',
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          secondary: const Text('🔔', style: TextStyle(fontSize: 20)),
+          activeColor: AppColors.accent,
+          inactiveThumbColor: AppColors.textMuted,
+          inactiveTrackColor: AppColors.divider,
+        ),
+      ]),
+    ).animate().fadeIn().slideY(begin: 0.1);
   }
 
   // ─── 앱 정보 카드 ─────────────────────────────────

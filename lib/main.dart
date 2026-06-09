@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/backend_service.dart';
+import 'core/services/notification_service.dart';
 import 'features/splash/splash_screen.dart';
 import 'shared/models/saju_profile.dart';
+import 'shared/models/fortune_log.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +25,12 @@ void main() async {
   // Hive 초기화
   await Hive.initFlutter();
   Hive.registerAdapter(SajuProfileAdapter());
+  Hive.registerAdapter(FortuneLogAdapter());
   await Hive.openBox<SajuProfile>('profiles');
+  await Hive.openBox<FortuneLog>('fortune_logs');
+
+  // 로컬 알림 초기화
+  await NotificationService.initialize();
 
   // 백엔드 초기화 (익명 자동 로그인 + 토큰 복원)
   // 네트워크 없어도 앱은 정상 동작 (로컬 모드)
