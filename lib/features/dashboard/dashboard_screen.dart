@@ -28,6 +28,8 @@ import '../building/building_compat_screen.dart';
 import '../map/fortune_map_screen.dart';
 import '../family/family_deed_screen.dart';
 import '../history/fortune_history_screen.dart';
+import '../map/seoul_top10_screen.dart';
+import '../simulator/moving_simulator_screen.dart';
 import '../../core/widgets/chart_widgets.dart';
 import '../../core/services/fortune_log_service.dart';
 
@@ -1117,6 +1119,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
        'screen': FamilyDeedScreen(resultA: _result, profileA: widget.profile)},
       {'label': '記錄', 'title': '운세 히스토리', 'sub': '추이 그래프', 'isNew': true,
        'screen': FortuneHistoryScreen(profile: widget.profile)},
+      {'label': '模擬', 'title': '이사 시뮬레이터', 'sub': '동네 궁합', 'isNew': true,
+       'screen': MovingSimulatorScreen(result: _result, profile: widget.profile)},
+      {'label': 'TOP', 'title': '서울 TOP 10', 'sub': '궁합 랭킹', 'isNew': true,
+       'screen': SeoulTop10Screen(result: _result, profile: widget.profile)},
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
