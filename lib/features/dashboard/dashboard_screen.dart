@@ -19,6 +19,9 @@ import 'shinsal_card.dart';
 import '../location/location_card.dart';
 import '../share/share_card.dart';
 import '../share/floor_unit_screen.dart';
+import '../calendar/fortune_calendar_screen.dart';
+import '../building/building_compat_screen.dart';
+import '../map/fortune_map_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -1049,6 +1052,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
        'screen': TimingScreen(result: _result, profile: widget.profile)},
       {'label': '層數', 'title': '층수·호수', 'sub': '궁합 분석',
        'screen': FloorUnitScreen(result: _result, name: widget.profile.name)},
+      {'label': '曆', 'title': '운세 캘린더', 'sub': '일진 분석', 'isNew': true,
+       'screen': FortuneCalendarScreen(result: _result, profile: widget.profile)},
+      {'label': '建物', 'title': '건물 궁합', 'sub': '준공일 분석', 'isNew': true,
+       'screen': BuildingCompatScreen(result: _result, profile: widget.profile)},
+      {'label': '地圖', 'title': '입지 히트맵', 'sub': '자치구 분석', 'isNew': true,
+       'screen': FortuneMapScreen(result: _result, profile: widget.profile)},
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1068,28 +1077,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
               MaterialPageRoute(builder: (_) => a['screen'] as Widget)),
             child: TraditionalCard(
               padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  ShaderMask(
-                    shaderCallback: (b) => AppColors.goldGradient.createShader(b),
-                    child: Text(a['label'] as String, style: const TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 22, fontWeight: FontWeight.bold,
-                      color: Colors.white, letterSpacing: 2,
+              child: Stack(children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    ShaderMask(
+                      shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+                      child: Text(a['label'] as String, style: const TextStyle(
+                        fontFamily: 'NotoSerifKR',
+                        fontSize: 22, fontWeight: FontWeight.bold,
+                        color: Colors.white, letterSpacing: 2,
+                      )),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(a['title'] as String, style: const TextStyle(
+                      fontFamily: 'NotoSerifKR', fontSize: 12,
+                      fontWeight: FontWeight.bold, color: AppColors.textPrimary,
+                      letterSpacing: 0.5,
                     )),
+                    const SizedBox(height: 2),
+                    Text(a['sub'] as String, style: const TextStyle(
+                      fontSize: 10, color: AppColors.textSecondary)),
+                  ]),
+                ),
+                if (a['isNew'] == true)
+                  Positioned(
+                    top: 5, right: 5,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppColors.hwaColor.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: const Text('NEW',
+                        style: TextStyle(fontSize: 7, color: Colors.white,
+                          fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(a['title'] as String, style: const TextStyle(
-                    fontFamily: 'NotoSerifKR', fontSize: 12,
-                    fontWeight: FontWeight.bold, color: AppColors.textPrimary,
-                    letterSpacing: 0.5,
-                  )),
-                  const SizedBox(height: 2),
-                  Text(a['sub'] as String, style: const TextStyle(
-                    fontSize: 10, color: AppColors.textSecondary)),
-                ]),
-              ),
+              ]),
             ),
           ).animate(delay: Duration(milliseconds: 500 + idx * 80))
             .fadeIn().scale(begin: const Offset(0.92, 0.92));
