@@ -122,23 +122,26 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ),
-                    // 고정 내부 원
+                    // 앱 로고
                     Container(
                       width: 110, height: 110,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.cardBg,
-                        border: Border.all(color: AppColors.accent.withOpacity(0.4), width: 1),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accent.withOpacity(0.15),
-                            blurRadius: 20, spreadRadius: 2,
+                            color: AppColors.accent.withOpacity(0.30),
+                            blurRadius: 28, spreadRadius: 4,
                           ),
                         ],
                       ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/app_logo.png',
+                          width: 110, height: 110,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                    // 태극 문양
-                    const TaegeukSymbol(size: 72),
                   ]),
                 )
                 .animate()
