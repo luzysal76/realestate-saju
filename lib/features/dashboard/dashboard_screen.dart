@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/router/app_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -116,20 +117,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     icon: const Icon(Icons.people_outline, size: 20),
                     tooltip: '프로필 선택',
                     onPressed: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                          builder: (_) => const ProfileSelectScreen())),
+                      AppRouter.slide(const ProfileSelectScreen())),
                   ),
                 IconButton(
                   icon: const Icon(Icons.cloud_outlined, size: 20),
                   tooltip: '설정/백업',
                   onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                    AppRouter.slide(const SettingsScreen())),
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, size: 20),
                   tooltip: '프로필 변경',
                   onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const InputScreen())),
+                    AppRouter.slide(const InputScreen())),
                 ),
               ],
             ),
@@ -662,7 +662,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return GestureDetector(
       onTap: () => Navigator.push(context,
-        MaterialPageRoute(builder: (_) => SajuDetailScreen(
+        AppRouter.slide(SajuDetailScreen(
             result: _result, profile: widget.profile))),
       child: TraditionalCard(
         doubleBorder: true,
@@ -1037,8 +1037,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const Spacer(),
           GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => TimingScreen(result: _result, profile: widget.profile))),
+            onTap: () => Navigator.push(context,
+              AppRouter.slide(TimingScreen(result: _result, profile: widget.profile))),
             child: Text('더보기 ›', style: TextStyle(
               fontSize: 11, color: AppColors.accent.withOpacity(0.8))),
           ),
@@ -1135,7 +1135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () {
               HapticFeedback.mediumImpact();
               Navigator.push(context,
-                MaterialPageRoute(builder: (_) => a['screen'] as Widget));
+                AppRouter.slide(a['screen'] as Widget));
             },
             child: TraditionalCard(
               padding: EdgeInsets.zero,

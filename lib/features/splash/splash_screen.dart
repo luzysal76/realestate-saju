@@ -3,6 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
+import '../../core/widgets/yundo_spinner.dart';
+import '../../core/router/app_router.dart';
 import '../../shared/models/saju_profile.dart';
 import '../input/input_screen.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -40,16 +42,16 @@ class _SplashScreenState extends State<SplashScreen>
     final box = Hive.box<SajuProfile>('profiles');
     if (box.isEmpty) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const InputScreen()),
+        AppRouter.slide(const InputScreen()),
       );
     } else if (box.length == 1) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => DashboardScreen(profile: box.getAt(0)!)),
+        AppRouter.slide(DashboardScreen(profile: box.getAt(0)!)),
       );
     } else {
       // 여러 프로필이 있을 때 선택 화면
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const ProfileSelectScreen()),
+        AppRouter.slide(const ProfileSelectScreen()),
       );
     }
   }
@@ -207,24 +209,9 @@ class _SplashScreenState extends State<SplashScreen>
 
                 const SizedBox(height: 64),
 
-                // 로딩 — 전통 스타일 도트
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (i) => Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: 6, height: 6,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.accent.withOpacity(0.3 + i * 0.15),
-                    ),
-                  )
-                  .animate(
-                    delay: Duration(milliseconds: 900 + i * 100),
-                    onPlay: (c) => c.repeat(reverse: true),
-                  )
-                  .scaleXY(begin: 0.5, end: 1.2, duration: 600.ms)
-                  .fadeIn()),
-                ),
+                // 로딩 — 윤도(尹道) 스피너
+                const YundoSpinner(size: 52)
+                    .animate(delay: 800.ms).fadeIn(duration: 500.ms),
 
                 const SizedBox(height: 14),
 

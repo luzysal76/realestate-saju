@@ -136,8 +136,10 @@ class _RadarPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
-// ─── 반원 게이지 ─────────────────────────────────────
+// ─── 반원 게이지 (Count-up 애니메이션) ──────────────────
 /// 0~100 점수를 반원 글로우 게이지로 표시
+/// 브랜드 가이드: "0에서 최종 점수까지 빠르게 올라가는 Count-up 효과"
+/// font-display-score: 40pt / Bold
 class SemiCircleGauge extends StatelessWidget {
   final int score;
   final double width;
@@ -152,27 +154,34 @@ class SemiCircleGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = width / 2 + 32.0;
-    return SizedBox(
-      width: width, height: h,
-      child: Stack(alignment: Alignment.bottomCenter, children: [
-        CustomPaint(size: Size(width, h), painter: _GaugePainter(score)),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 0),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ShaderMask(
-              shaderCallback: (b) => AppColors.goldGradient.createShader(b),
-              // Montserrat — 브랜드 가이드: 운세 점수 숫자 폰트
-              child: Text('$score', style: GoogleFonts.montserrat(
-                fontSize: 38, fontWeight: FontWeight.w900,
-                color: Colors.white, height: 1, letterSpacing: -1)),
-            ),
-            const SizedBox(height: 2),
-            Text(label, style: GoogleFonts.montserrat(
-              fontSize: 9, color: AppColors.textSecondary, letterSpacing: 1.5)),
+    final h = width / 2 + 36.0;
+    // Count-up: 0 → score, 1000ms ease-out
+    return TweenAnimationBuilder<int>(
+      tween: IntTween(begin: 0, end: score),
+      duration: const Duration(milliseconds: 1000),
+      curve: Curves.easeOut,
+      builder: (_, animated, __) {
+        return SizedBox(
+          width: width, height: h,
+          child: Stack(alignment: Alignment.bottomCenter, children: [
+            // 게이지 (애니메이션 점수 연동)
+            CustomPaint(size: Size(width, h), painter: _GaugePainter(animated)),
+            // 숫자 + 라벨
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              ShaderMask(
+                shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+                // font-display-score: 40pt Bold (Montserrat)
+                child: Text('$animated', style: GoogleFonts.montserrat(
+                  fontSize: 40, fontWeight: FontWeight.w700,
+                  color: Colors.white, height: 1.2, letterSpacing: -1)),
+              ),
+              const SizedBox(height: 2),
+              Text(label, style: GoogleFonts.montserrat(
+                fontSize: 9, color: AppColors.textSecondary, letterSpacing: 1.5)),
+            ]),
           ]),
-        ),
-      ]),
+        );
+      },
     );
   }
 }
