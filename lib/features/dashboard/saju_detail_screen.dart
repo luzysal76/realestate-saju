@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/widgets/chart_widgets.dart';
+import '../../core/widgets/fortune_flow_chart.dart';
 import '../../core/saju/saju_calculator.dart';
 import '../../core/saju/shinsal.dart';
 import '../../shared/models/saju_profile.dart';
+import '../premium/premium_modal.dart';
 import 'shinsal_card.dart';
 
 class SajuDetailScreen extends StatelessWidget {
@@ -580,6 +583,35 @@ class _DaeWunTab extends StatelessWidget {
         ).animate().fadeIn(),
         const SizedBox(height: 10),
 
+        // ── 대운 흐름 라인 차트 ────────────────────────
+        TraditionalCard(
+          doubleBorder: true,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const KoreanSectionTitle(
+              title: '대운 투자지수 흐름',
+              subtitle: '10년 단위 부동산 운세 점수',
+            ),
+            const SizedBox(height: 14),
+            DaeWunFlowChart(
+              daeWunList: result.daeWunList,
+              birthYear: profile.birthDate.year,
+              height: 200,
+            ),
+            const SizedBox(height: 8),
+            // 범례
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              _LegendDot(color: AppColors.accent, label: '대운 점수'),
+              const SizedBox(width: 16),
+              _LegendDot(
+                color: AppColors.accent.withOpacity(0.5),
+                label: '현재 대운',
+                isDash: true,
+              ),
+            ]),
+          ]),
+        ).animate(delay: 80.ms).fadeIn().slideY(begin: 0.1),
+        const SizedBox(height: 10),
+
         ...result.daeWunList.asMap().entries.map((e) {
           final dw = e.value;
           final isCurrent = dw.isCurrent(currentYear, profile.birthDate.year);
@@ -722,6 +754,33 @@ class _SeWunTab extends StatelessWidget {
         ).animate().fadeIn(),
         const SizedBox(height: 10),
 
+        // ── 세운 흐름 라인 차트 ────────────────────────
+        TraditionalCard(
+          doubleBorder: true,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const KoreanSectionTitle(
+              title: '세운 투자지수 흐름',
+              subtitle: '연도별 부동산 운세 점수 (0~100)',
+            ),
+            const SizedBox(height: 14),
+            SeWunFlowChart(
+              seWunList: result.seWunList,
+              height: 180,
+            ),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              _LegendDot(color: AppColors.jade, label: '세운 점수'),
+              const SizedBox(width: 16),
+              _LegendDot(
+                color: AppColors.jade.withOpacity(0.5),
+                label: '올해',
+                isDash: true,
+              ),
+            ]),
+          ]),
+        ).animate(delay: 80.ms).fadeIn().slideY(begin: 0.1),
+        const SizedBox(height: 10),
+
         ...result.seWunList.asMap().entries.map((e) {
           final sw = e.value;
           final isNow = sw.year == DateTime.now().year;
@@ -848,5 +907,141 @@ class _SeWunTab extends StatelessWidget {
     if (action.contains('매수') || action.contains('적극')) return AppColors.mokColor;
     if (action.contains('매도') || action.contains('현금')) return AppColors.hwaColor;
     return AppColors.accent;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 공통 헬퍼 위젯
+// ═══════════════════════════════════════════════════════
+
+/// 차트 범례 점
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  final bool isDash;
+
+  const _LegendDot({
+    required this.color,
+    required this.label,
+    this.isDash = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      isDash
+          ? SizedBox(
+              width: 16, height: 2,
+              child: CustomPaint(
+                painter: _DashPainter(color: color),
+              ),
+            )
+          : Container(
+              width: 10, height: 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.4),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+      const SizedBox(width: 5),
+      Text(label, style: TextStyle(
+        fontSize: 10, color: color.withOpacity(0.9),
+      )),
+    ]);
+  }
+}
+
+class _DashPainter extends CustomPainter {
+  final Color color;
+  _DashPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(Offset(x, size.height / 2),
+          Offset(x + 3, size.height / 2), paint);
+      x += 5;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// ═══════════════════════════════════════════════════════
+// 프리미엄 업셀 배너 (탭 하단용)
+// ═══════════════════════════════════════════════════════
+class PremiumUpsellBanner extends StatelessWidget {
+  const PremiumUpsellBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        showPremiumModal(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.accent.withOpacity(0.08),
+              AppColors.jade.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+        ),
+        child: Row(children: [
+          // 아이콘
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.accent.withOpacity(0.12),
+            ),
+            child: const Center(
+              child: Text('✨', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 텍스트
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            ShaderMask(
+              shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+              child: const Text('AI 상세 분석 + 풍수 팁 보기',
+                style: TextStyle(
+                  fontFamily: 'NotoSerifKR',
+                  fontSize: 13, fontWeight: FontWeight.bold,
+                  color: Colors.white, letterSpacing: 0.3,
+                )),
+            ),
+            const SizedBox(height: 2),
+            const Text('프리미엄에서 더 깊은 부동산 인사이트를',
+              style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+          ])),
+          const Icon(Icons.arrow_forward_ios_rounded,
+            size: 12, color: AppColors.accent),
+        ]),
+      ),
+    ).animate().shimmer(
+      duration: 3000.ms,
+      delay: 1000.ms,
+      color: AppColors.accent.withOpacity(0.08),
+    );
   }
 }

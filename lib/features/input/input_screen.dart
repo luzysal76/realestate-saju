@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
+import '../../core/widgets/gold_button.dart';
 import '../../core/saju/lunar_converter.dart';
 import '../../core/saju/wonkwang_data.dart';
 import '../../shared/models/saju_profile.dart';
@@ -28,6 +29,7 @@ class _InputScreenState extends State<InputScreen> {
   bool _unknownHour = false;
   bool _isLunar = false;      // 음력 입력 모드
   bool _isLeapMonth = false;  // 윤달 여부
+  bool _isLoading = false;    // 분석 로딩 오버레이
   // 원광식 진태양시 보정
   bool _useTrueSolarTime = false;
   String? _birthCity;
@@ -96,7 +98,7 @@ class _InputScreenState extends State<InputScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     final parsed = _parseBirthDate();
-    if (parsed == null) return; // validator가 이미 막음
+    if (parsed == null) return;
     _birthDate = parsed;
 
     final cityLon = (_useTrueSolarTime && _birthCity != null)
@@ -114,7 +116,6 @@ class _InputScreenState extends State<InputScreen> {
     );
 
     final box = Hive.box<SajuProfile>('profiles');
-    // 동일한 이름+생년월일 프로필이 이미 있으면 업데이트, 없으면 추가
     final existingIdx = box.values.toList().indexWhere(
       (p) => p.name == profile.name &&
           p.birthDate.year == profile.birthDate.year &&
@@ -127,18 +128,30 @@ class _InputScreenState extends State<InputScreen> {
       box.add(profile);
     }
 
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, a1, a2) => DashboardScreen(profile: profile),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
+    // ── "당신의 기운을 읽는 중..." 로딩 오버레이 (1.5초) ──
+    setState(() => _isLoading = true);
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, a1, a2) => DashboardScreen(profile: profile),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // 로딩 중이면 오버레이만 표시
+    if (_isLoading) {
+      return const Scaffold(
+        body: FortuneLoadingOverlay(),
+      );
+    }
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -624,49 +637,11 @@ class _InputScreenState extends State<InputScreen> {
 
                     const SizedBox(height: 28),
 
-                    // ─── 분석 시작 버튼 ───────────────────────────
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.accentDim,
-                            AppColors.accent,
-                            AppColors.accentDim,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                            color: AppColors.accentLight.withOpacity(0.5)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accent.withOpacity(0.2),
-                            blurRadius: 12, spreadRadius: 1,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _submit,
-                          borderRadius: BorderRadius.circular(4),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 18),
-                            child: Center(
-                              child: Text(
-                                '부동산 사주 분석 시작하기',
-                                style: TextStyle(
-                                  fontFamily: 'NotoSerifKR',
-                                  fontSize: 16, fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A0804),
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                    // ─── 분석 시작 버튼 (GoldButton) ─────────────
+                    GoldButton(
+                      label: '부동산 사주 분석 시작하기',
+                      onTap: _submit,
+                      borderRadius: 12,
                     ).animate(delay: 520.ms).fadeIn().slideY(begin: 0.2),
 
                     const SizedBox(height: 6),

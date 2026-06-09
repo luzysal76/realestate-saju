@@ -91,7 +91,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: NestedScrollView(
           headerSliverBuilder: (ctx, _) => [
             SliverAppBar(
-              expandedHeight: 160,
+              expandedHeight: 210,
               floating: false, pinned: true,
               backgroundColor: AppColors.surface,
               flexibleSpace: FlexibleSpaceBar(background: _buildHeader()),
@@ -571,6 +571,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildHeader() {
     final oe = _result.mainOehaeng;
     final color = AppColors.getOehaengColor(oe);
+    // 오늘 운세 한 줄 요약
+    final today = DateTime.now();
+    final todayGj = SajuCalculator.dayToGanJi(today);
+    final cg = todayGj['cheongan'] ?? '';
+    final ji = todayGj['jiji'] ?? '';
+    final ss = SajuCalculator.calcSipSeong(_result.ilgan, cg);
+    final jijiRel = _getJijiRelation(_result.ilji, ji);
+    final isGongmang = _result.shinSalResult.gongmang.contains(ji);
+    final score = _getTodayScore(ss.name, jijiRel, isGongmang);
+    final todaySummary = _getTodayOneLine(score);
+
     return Container(
       decoration: BoxDecoration(gradient: AppColors.headerGradient),
       padding: const EdgeInsets.fromLTRB(18, 50, 18, 14),
@@ -585,6 +596,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            // ── RN HomeScreen 스타일 인삿말 ──────────────
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                '안녕하세요, ${widget.profile.name}님',
+                style: const TextStyle(
+                  fontFamily: 'NotoSerifKR',
+                  fontSize: 13, color: AppColors.textSecondary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 3),
+              RichText(
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontFamily: 'NotoSerifKR',
+                    fontSize: 15,
+                  ),
+                  children: [
+                    const TextSpan(
+                      text: '오늘의 재물운은 ',
+                      style: TextStyle(color: AppColors.textPrimary),
+                    ),
+                    TextSpan(
+                      text: todaySummary,
+                      style: TextStyle(
+                        color: score >= 70
+                            ? AppColors.accent
+                            : score >= 50
+                                ? AppColors.jade
+                                : AppColors.textSecondary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const TextSpan(
+                      text: '입니다',
+                      style: TextStyle(color: AppColors.textPrimary),
+                    ),
+                  ],
+                ),
+              ),
+            ]),
+            const SizedBox(height: 10),
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               // 오행 원형 뱃지
               OehaengBadge(oe, large: true),
@@ -1255,6 +1308,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Text(sub, style: TextStyle(fontSize: 9, color: color.withOpacity(0.8))),
       ]),
     );
+  }
+
+  // RN HomeScreen: '오늘의 재물운은 {최고조}입니다'
+  String _getTodayOneLine(int score) {
+    if (score >= 85) return '최고조 🔥';
+    if (score >= 75) return '매우 좋습니다 ✨';
+    if (score >= 65) return '좋습니다 🌟';
+    if (score >= 50) return '보통입니다 ⚡';
+    if (score >= 38) return '다소 약합니다 🌧';
+    return '주의가 필요합니다 ⚠️';
   }
 
   int _getTodayScore(String ssName, String jijiRel, bool isGongmang) {
