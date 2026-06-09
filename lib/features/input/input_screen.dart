@@ -846,19 +846,29 @@ class _InputScreenState extends State<InputScreen> {
 }
 
 /// 날짜 자동 포맷: 숫자 8자리 입력 → YYYY-MM-DD
+/// 백스페이스로 대시(-) 삭제 시 앞 숫자까지 함께 제거
 class _DateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.length > 8) return oldValue;
+    final oldDigits = oldValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    var newDigits  = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // 삭제(백스페이스) 중인데 숫자 수가 그대로 → 대시를 지운 것
+    // 앞 숫자 하나도 함께 제거해야 실제로 지워지는 느낌
+    final isDeleting = newValue.text.length < oldValue.text.length;
+    if (isDeleting && newDigits.length == oldDigits.length && newDigits.isNotEmpty) {
+      newDigits = newDigits.substring(0, newDigits.length - 1);
+    }
+
+    if (newDigits.length > 8) return oldValue;
 
     final buf = StringBuffer();
-    for (int i = 0; i < digits.length; i++) {
+    for (int i = 0; i < newDigits.length; i++) {
       if (i == 4 || i == 6) buf.write('-');
-      buf.write(digits[i]);
+      buf.write(newDigits[i]);
     }
     final str = buf.toString();
     return TextEditingValue(
