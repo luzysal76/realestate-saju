@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/theme/app_theme.dart';
@@ -17,14 +18,8 @@ class InputScreen extends StatefulWidget {
 
 class _InputScreenState extends State<InputScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl  = TextEditingController();
-  final _yearCtrl  = TextEditingController(text: '1990');
-  final _monthCtrl = TextEditingController(text: '01');
-  final _dayCtrl   = TextEditingController(text: '01');
-
-  final _yearFocus  = FocusNode();
-  final _monthFocus = FocusNode();
-  final _dayFocus   = FocusNode();
+  final _nameCtrl = TextEditingController();
+  final _dateCtrl = TextEditingController(text: '1990-01-01');
 
   DateTime _birthDate = DateTime(1990, 1, 1);
   int _birthHour = 12;
@@ -53,10 +48,7 @@ class _InputScreenState extends State<InputScreen> {
   @override
   void initState() {
     super.initState();
-    // 날짜 입력 변경 시 음력 미리보기 실시간 갱신
-    _yearCtrl.addListener(_onDateTextChanged);
-    _monthCtrl.addListener(_onDateTextChanged);
-    _dayCtrl.addListener(_onDateTextChanged);
+    _dateCtrl.addListener(_onDateTextChanged);
   }
 
   void _onDateTextChanged() {
@@ -66,27 +58,26 @@ class _InputScreenState extends State<InputScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _yearCtrl.dispose(); _monthCtrl.dispose(); _dayCtrl.dispose();
-    _yearFocus.dispose(); _monthFocus.dispose(); _dayFocus.dispose();
+    _dateCtrl.dispose();
     super.dispose();
   }
 
-  /// 년/월/일 텍스트 → DateTime 변환 (유효성 검사 포함)
+  /// 날짜 텍스트(YYYY-MM-DD) → DateTime 변환 (유효성 검사 포함)
   DateTime? _parseBirthDate() {
-    final y = int.tryParse(_yearCtrl.text.trim());
-    final m = int.tryParse(_monthCtrl.text.trim());
-    final d = int.tryParse(_dayCtrl.text.trim());
+    final digits = _dateCtrl.text.replaceAll('-', '');
+    if (digits.length != 8) return null;
+    final y = int.tryParse(digits.substring(0, 4));
+    final m = int.tryParse(digits.substring(4, 6));
+    final d = int.tryParse(digits.substring(6, 8));
     if (y == null || m == null || d == null) return null;
     if (y < 1930 || y > DateTime.now().year) return null;
     if (m < 1 || m > 12) return null;
     if (d < 1 || d > (_isLunar ? 30 : 31)) return null;
 
     if (_isLunar) {
-      // 음력 → 양력 변환
       return LunarConverter.lunarToSolar(y, m, d, isLeap: _isLeapMonth);
     }
 
-    // 양력
     try {
       final dt = DateTime(y, m, d);
       if (dt.isAfter(DateTime.now())) return null;
@@ -270,112 +261,37 @@ class _InputScreenState extends State<InputScreen> {
                             ],
                           ),
                           const SizedBox(height: 10),
-                          Row(children: [
-                            // 년도
-                            Expanded(
-                              flex: 5,
-                              child: TextFormField(
-                                controller: _yearCtrl,
-                                focusNode: _yearFocus,
-                                keyboardType: TextInputType.number,
-                                maxLength: 4,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontFamily: 'NotoSerifKR',
-                                  color: AppColors.textPrimary,
-                                  fontSize: 17, letterSpacing: 1,
-                                ),
-                                decoration: _inputDeco('1990').copyWith(
-                                  counterText: '',
-                                  suffixText: '년',
-                                  suffixStyle: const TextStyle(
-                                    fontSize: 13, color: AppColors.textSecondary),
-                                ),
-                                onTap: () => _yearCtrl.selection = TextSelection(
-                                  baseOffset: 0, extentOffset: _yearCtrl.text.length),
-                                onChanged: (v) {
-                                  if (v.length == 4) {
-                                    _monthFocus.requestFocus();
-                                  }
-                                },
-                                validator: (_) {
-                                  final y = int.tryParse(_yearCtrl.text.trim());
-                                  if (y == null || y < 1930 || y > DateTime.now().year) {
-                                    return '년도 오류';
-                                  }
-                                  return null;
-                                },
+                          TextFormField(
+                            controller: _dateCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [_DateInputFormatter()],
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'NotoSerifKR',
+                              color: AppColors.textPrimary,
+                              fontSize: 20, letterSpacing: 3,
+                            ),
+                            decoration: _inputDeco('').copyWith(
+                              hintText: 'YYYY-MM-DD',
+                              hintStyle: TextStyle(
+                                fontSize: 17, letterSpacing: 3,
+                                color: AppColors.textSecondary.withOpacity(0.35),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            // 월
-                            Expanded(
-                              flex: 3,
-                              child: TextFormField(
-                                controller: _monthCtrl,
-                                focusNode: _monthFocus,
-                                keyboardType: TextInputType.number,
-                                maxLength: 2,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontFamily: 'NotoSerifKR',
-                                  color: AppColors.textPrimary,
-                                  fontSize: 17, letterSpacing: 1,
-                                ),
-                                decoration: _inputDeco('01').copyWith(
-                                  counterText: '',
-                                  suffixText: '월',
-                                  suffixStyle: const TextStyle(
-                                    fontSize: 13, color: AppColors.textSecondary),
-                                ),
-                                onTap: () => _monthCtrl.selection = TextSelection(
-                                  baseOffset: 0, extentOffset: _monthCtrl.text.length),
-                                onChanged: (v) {
-                                  if (v.length == 2) {
-                                    _dayFocus.requestFocus();
-                                  }
-                                },
-                                validator: (_) {
-                                  final m = int.tryParse(_monthCtrl.text.trim());
-                                  if (m == null || m < 1 || m > 12) return '월 오류';
-                                  return null;
-                                },
-                              ),
+                            onTap: () => _dateCtrl.selection = TextSelection(
+                              baseOffset: 0,
+                              extentOffset: _dateCtrl.text.length,
                             ),
-                            const SizedBox(width: 8),
-                            // 일
-                            Expanded(
-                              flex: 3,
-                              child: TextFormField(
-                                controller: _dayCtrl,
-                                focusNode: _dayFocus,
-                                keyboardType: TextInputType.number,
-                                maxLength: 2,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontFamily: 'NotoSerifKR',
-                                  color: AppColors.textPrimary,
-                                  fontSize: 17, letterSpacing: 1,
-                                ),
-                                decoration: _inputDeco('01').copyWith(
-                                  counterText: '',
-                                  suffixText: '일',
-                                  suffixStyle: const TextStyle(
-                                    fontSize: 13, color: AppColors.textSecondary),
-                                ),
-                                onTap: () => _dayCtrl.selection = TextSelection(
-                                  baseOffset: 0, extentOffset: _dayCtrl.text.length),
-                                onFieldSubmitted: (_) => _submit(),
-                                validator: (_) {
-                                  final parsed = _parseBirthDate();
-                                  if (parsed == null) {
-                                    return _isLunar ? '음력 날짜 오류' : '날짜 오류';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ]),
+                            onFieldSubmitted: (_) => _submit(),
+                            validator: (_) {
+                              if (_parseBirthDate() == null) {
+                                return _isLunar
+                                    ? '음력 날짜를 확인해주세요 (예: 1976-10-02)'
+                                    : '날짜를 확인해주세요 (예: 1976-10-02)';
+                              }
+                              return null;
+                            },
+                          ),
 
                           // 음력 모드: 윤달 체크 + 변환 미리보기
                           if (_isLunar) ...[
@@ -927,4 +843,27 @@ class _InputScreenState extends State<InputScreen> {
       borderSide: const BorderSide(color: AppColors.hwaColor),
     ),
   );
+}
+
+/// 날짜 자동 포맷: 숫자 8자리 입력 → YYYY-MM-DD
+class _DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 8) return oldValue;
+
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 4 || i == 6) buf.write('-');
+      buf.write(digits[i]);
+    }
+    final str = buf.toString();
+    return TextEditingValue(
+      text: str,
+      selection: TextSelection.collapsed(offset: str.length),
+    );
+  }
 }
