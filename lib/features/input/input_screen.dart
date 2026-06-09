@@ -145,7 +145,7 @@ class _InputScreenState extends State<InputScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF0E8D5), Color(0xFFF7F2EA)],
+            colors: [Color(0xFF0A0E17), Color(0xFF0D1220)],
           ),
         ),
         child: Stack(children: [

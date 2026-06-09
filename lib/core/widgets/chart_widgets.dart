@@ -29,9 +29,9 @@ class _RadarPainter extends CustomPainter {
   static const _axes  = ['수', '목', '화', '토', '금'];
   static const _colors = {
     '수': Color(0xFF2288EE),
-    '목': Color(0xFF45C070),
+    '목': Color(0xFF00A86B), // Jade Green
     '화': Color(0xFFE84020),
-    '토': Color(0xFFD49020),
+    '토': Color(0xFFD4AF37), // Antique Gold
     '금': Color(0xFFA8B8C8),
   };
 
@@ -252,10 +252,10 @@ class _GaugePainter extends CustomPainter {
 
 // ─── 점수 색상 헬퍼 (다크 테마용) ────────────────────
 Color getScoreColor(int score) {
-  if (score >= 80) return const Color(0xFFFFD060);
-  if (score >= 65) return AppColors.toColor;
-  if (score >= 50) return AppColors.mokColor;
-  if (score >= 35) return AppColors.textSecondary;
+  if (score >= 80) return AppColors.accent;       // Antique Gold
+  if (score >= 65) return AppColors.jade;         // Jade Green
+  if (score >= 50) return AppColors.textSecondary;
+  if (score >= 35) return AppColors.textMuted;
   return const Color(0xFF6A7080);
 }
 

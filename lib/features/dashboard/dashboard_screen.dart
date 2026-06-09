@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -104,7 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
               _buildTodayCard(),
               const SizedBox(height: 8),
@@ -1099,8 +1100,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final idx = e.key;
           final a = e.value;
           return GestureDetector(
-            onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => a['screen'] as Widget)),
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              Navigator.push(context,
+                MaterialPageRoute(builder: (_) => a['screen'] as Widget));
+            },
             child: TraditionalCard(
               padding: EdgeInsets.zero,
               child: Stack(children: [

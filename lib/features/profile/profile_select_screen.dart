@@ -96,7 +96,7 @@ class _ProfileSelectScreenState extends State<ProfileSelectScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFFF0E8D5), Color(0xFFF7F2EA)],
+                  colors: [Color(0xFF0D1525), Color(0xFF0A0E17)],
                 ),
               ),
               child: Column(children: [

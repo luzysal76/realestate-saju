@@ -1,10 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../theme/app_theme.dart';
 
 // ─── 전통 카드 ─────────────────────────────────────────
 
-/// 단청 테두리 전통 카드
+/// Glassmorphism 카드 — Deep Midnight × Antique Gold
 class TraditionalCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -23,36 +24,42 @@ class TraditionalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = borderColor ?? AppColors.divider;
-    final bg = bgColor ?? AppColors.cardBg;
+    final border = borderColor ?? AppColors.glassBorder;
+    final bg = bgColor ?? AppColors.glassBg;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 8, offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: doubleBorder
-          ? Container(
-              margin: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(2),
-                border: Border.all(
-                  color: border.withOpacity(0.4), width: 0.5),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: border, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accent.withOpacity(0.06),
+                blurRadius: 24, offset: const Offset(0, 6),
               ),
-              padding: padding ?? const EdgeInsets.all(16),
-              child: child,
-            )
-          : Padding(
-              padding: padding ?? const EdgeInsets.all(16),
-              child: child,
-            ),
+            ],
+          ),
+          child: doubleBorder
+              ? Container(
+                  margin: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.accent.withOpacity(0.08), width: 0.5),
+                  ),
+                  padding: padding ?? const EdgeInsets.all(16),
+                  child: child,
+                )
+              : Padding(
+                  padding: padding ?? const EdgeInsets.all(16),
+                  child: child,
+                ),
+        ),
+      ),
     );
   }
 }
@@ -174,8 +181,16 @@ class OehaengBadge extends StatelessWidget {
       width: size, height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(0.15),
-        border: Border.all(color: color.withOpacity(0.6), width: 1),
+        color: color.withOpacity(0.12),
+        border: Border.all(color: color.withOpacity(0.55), width: 1),
+        // Glow Effect — Outer Glow 20% 투명도
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.20),
+            blurRadius: large ? 16 : 10,
+            spreadRadius: large ? 2 : 1,
+          ),
+        ],
       ),
       child: Center(
         child: Text(
@@ -185,6 +200,7 @@ class OehaengBadge extends StatelessWidget {
             fontSize: fontSize,
             fontWeight: FontWeight.bold,
             color: color,
+            shadows: [Shadow(color: color.withOpacity(0.5), blurRadius: 8)],
           ),
         ),
       ),
@@ -270,7 +286,7 @@ class PillarCard extends StatelessWidget {
         width: 58, height: 76,
         decoration: BoxDecoration(
           color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: color.withOpacity(0.5), width: 1),
           boxShadow: [
             BoxShadow(
