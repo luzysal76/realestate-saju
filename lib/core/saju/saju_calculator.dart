@@ -103,10 +103,12 @@ class SajuCalculator {
   }
 
   /// 원광만세력: 천문 계산 기반 정확한 월주 결정
-  /// 기존 평균치(±1일 오차)를 실제 절입일 계산으로 교체
-  static Map<String, String> monthToGanJi(int year, int month, [int day = 15]) {
+  /// [calYear]: 실제 양력 출생 연도 (절기 날짜 계산용)
+  /// [sajuYear]: 사주 기준 연도 (입춘 전이면 calYear-1, 오호둔법 계산용)
+  static Map<String, String> monthToGanJi(int calYear, int month,
+      [int day = 15, int? sajuYear]) {
     // 원광만세력 절기 날짜 (천문학적 계산, KST 기준)
-    final jeolgiDates = JeolgiCalculator.getYear(year);
+    final jeolgiDates = JeolgiCalculator.getYear(calYear);
 
     // 절기를 순서대로 확인하여 마지막으로 지난 절기의 지지 채택
     // 초기값 0(자월) = 대설~소한 사이 (연초 소한 이전 포함)
@@ -118,9 +120,11 @@ class SajuCalculator {
       }
     }
 
-    // 오호둔법(五虎遁法): 년간 기준 인월 천간 결정
+    // 오호둔법(五虎遁法): 사주년도 기준 인월 천간 결정
     // 갑기년→병인, 을경년→무인, 병신년→경인, 정임년→임인, 무계년→갑인
-    final yearCgIdx = (year - 4) % 10;
+    // ※ 입춘 이전 출생 시 전년도(sajuYear) 기준으로 계산
+    final effectiveYear = sajuYear ?? calYear;
+    final yearCgIdx = (effectiveYear - 4) % 10;
     const inMonthBaseCg = [2, 4, 6, 8, 0]; // 병, 무, 경, 임, 갑
     final inBase = inMonthBaseCg[yearCgIdx % 5];
 
@@ -472,8 +476,17 @@ class SajuCalculator {
         ? TrueSolarTime.correctionMinutes(birthDate, birthLongitude)
         : 0;
 
-    final yearGj = yearToGanJi(birthDate.year);
-    final monthGj = monthToGanJi(birthDate.year, birthDate.month, birthDate.day);
+    // 입춘(立春) 기준 사주 연도 결정
+    // 입춘 이전 출생 → 전년도를 사주 연도로 사용
+    final ipchun = JeolgiCalculator.getYear(birthDate.year)[1]; // index 1 = 입춘
+    final sajuYear = (birthDate.month < ipchun.month ||
+        (birthDate.month == ipchun.month && birthDate.day < ipchun.day))
+        ? birthDate.year - 1
+        : birthDate.year;
+
+    final yearGj = yearToGanJi(sajuYear);
+    final monthGj = monthToGanJi(
+        birthDate.year, birthDate.month, birthDate.day, sajuYear);
     final dayGj = dayToGanJi(birthDate);
     final hourGj = hourToGanJi(birthHour, dayGj['cheongan']!,
         minute: birthMinute, correctionMin: correctionMin);
