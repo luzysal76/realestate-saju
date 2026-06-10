@@ -1,4 +1,4 @@
-// wishlist_screen.dart — 관심 매물 목록 + 사주 점수 비교
+// wishlist_screen.dart — 관심 매물 목록 + 사주 점수 비교 + 지도 뷰
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -10,6 +10,7 @@ import '../../shared/models/saju_profile.dart';
 import '../map/district_map_data.dart';
 import 'wishlist_model.dart';
 import 'add_wishlist_screen.dart';
+import 'wishlist_map_view.dart';
 
 class WishlistScreen extends StatefulWidget {
   final SajuResult result;
@@ -24,7 +25,8 @@ class WishlistScreen extends StatefulWidget {
 class _WishlistScreenState extends State<WishlistScreen> {
   List<WishlistItem> _items = [];
   bool _loading = true;
-  bool _sortByScore = true; // true = 사주점수순, false = 저장순
+  bool _sortByScore = true;
+  bool _mapMode = false;
 
   @override
   void initState() {
@@ -139,15 +141,23 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   color: Colors.white, letterSpacing: 3)),
         ),
         actions: [
-          if (_items.isNotEmpty)
-            TextButton(
-              onPressed: () => setState(() => _sortByScore = !_sortByScore),
-              child: Text(_sortByScore ? '저장순' : '점수순',
-                  style: const TextStyle(color: AppColors.accent, fontSize: 12)),
+          if (_items.isNotEmpty) ...[
+            IconButton(
+              onPressed: () => setState(() => _mapMode = !_mapMode),
+              icon: Icon(_mapMode ? Icons.list : Icons.map_outlined,
+                  color: AppColors.accent, size: 20),
+              tooltip: _mapMode ? '목록 보기' : '지도 보기',
             ),
+            if (!_mapMode)
+              TextButton(
+                onPressed: () => setState(() => _sortByScore = !_sortByScore),
+                child: Text(_sortByScore ? '저장순' : '점수순',
+                    style: const TextStyle(color: AppColors.accent, fontSize: 12)),
+              ),
+          ],
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: _mapMode ? null : FloatingActionButton.extended(
         onPressed: _toAdd,
         backgroundColor: AppColors.accentDim,
         foregroundColor: Colors.white,
@@ -159,7 +169,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
           : _items.isEmpty
               ? _buildEmpty()
-              : _buildList(),
+              : (_mapMode ? _buildMapView() : _buildList()),
     );
   }
 
@@ -380,4 +390,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
         MaterialPageRoute(builder: (_) => AddWishlistScreen(existing: item)));
     if (ok == true) _load();
   }
+
+  Widget _buildMapView() => WishlistMapView(
+    items: _items,
+    result: widget.result,
+    scoreFn: _score,
+    scoreColorFn: _scoreColor,
+    onEditItem: _toEdit,
+  );
 }
