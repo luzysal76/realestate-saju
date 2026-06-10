@@ -38,6 +38,8 @@ import '../lifestyle/lifestyle_result_screen.dart';
 import '../family/family_analysis_screen.dart';
 import '../ai_report/ai_report_screen.dart';
 import '../wishlist/wishlist_screen.dart';
+import '../../core/services/notification_service.dart';
+import 'lucky_day_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -62,6 +64,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
     // 오늘 운세 자동 로그 저장
     _saveFortuneLog();
+    // 개인화 알림 자동 갱신 (활성화된 경우에만)
+    NotificationService.schedulePersonalizedReminder(
+      result: _result, name: widget.profile.name);
   }
 
   void _saveFortuneLog() {
@@ -131,7 +136,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: const Icon(Icons.cloud_outlined, size: 20),
                   tooltip: '설정/백업',
                   onPressed: () => Navigator.push(context,
-                    AppRouter.slide(const SettingsScreen())),
+                    AppRouter.slide(SettingsScreen(profileName: widget.profile.name))),
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, size: 20),
@@ -166,6 +171,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildSeWunCard(),
               const SizedBox(height: 10),
               _buildShinSalCard(),
+              const SizedBox(height: 10),
+              LuckyDayBanner(result: _result, profile: widget.profile),
               const SizedBox(height: 10),
               _buildQuickActions(context),
               const SizedBox(height: 10),

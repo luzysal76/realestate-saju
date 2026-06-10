@@ -6,9 +6,11 @@ import '../../core/widgets/korean_decorations.dart';
 import '../../core/services/backend_service.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/notification_service.dart';
+import 'move_alert_card.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final String profileName;
+  const SettingsScreen({super.key, this.profileName = '고객'});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -21,6 +23,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _message;
   bool _messageIsError = false;
   bool _notificationOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifState();
+  }
+
+  Future<void> _loadNotifState() async {
+    final enabled = await NotificationService.isEnabled();
+    if (mounted) setState(() => _notificationOn = enabled);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +63,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSyncCard(status),
             const SizedBox(height: 10),
             _buildNotificationCard(),
+            const SizedBox(height: 10),
+            MoveAlertCard(profileName: widget.profileName),
             const SizedBox(height: 10),
             _buildAppInfoCard(),
             const SizedBox(height: 16),
@@ -203,11 +218,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           value: _notificationOn,
           onChanged: (v) async {
             setState(() => _notificationOn = v);
+            await NotificationService.setEnabled(v);
             if (v) {
               await NotificationService.scheduleDailyReminder();
               await NotificationService.showTestNotification();
               setState(() {
-                _message = '매일 오전 8시에 운세 알림을 보내드립니다 ✨';
+                _message = '매일 오전 8시에 맞춤 운세 알림을 보내드립니다 ✨';
                 _messageIsError = false;
               });
             } else {
@@ -245,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
         ),
         Container(height: 0.5, color: AppColors.divider),
-        _tile(icon: '📱', title: '버전', sub: 'v1.0.0'),
+        _tile(icon: '📱', title: '버전', sub: 'v1.1.0+2'),
         Container(height: 0.5, color: AppColors.divider.withOpacity(0.5)),
         _tile(
           icon: '⭐', title: '앱 평가하기', sub: 'Play Store에서 평가',
