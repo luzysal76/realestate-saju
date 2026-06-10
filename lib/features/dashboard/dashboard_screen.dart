@@ -37,6 +37,7 @@ import '../lifestyle/lifestyle_input_screen.dart';
 import '../lifestyle/lifestyle_result_screen.dart';
 import '../family/family_analysis_screen.dart';
 import '../ai_report/ai_report_screen.dart';
+import '../wishlist/wishlist_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -1262,6 +1263,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
        'screen': null}, // 동적 라우팅
       {'label': 'AI', 'title': 'AI 리포트', 'sub': '맞춤 설명', 'isNew': true,
        'screen': null}, // 동적 라우팅
+      {'label': '物件', 'title': '관심 매물', 'sub': '사주 점수 비교', 'isNew': true,
+       'screen': null}, // 동적 라우팅
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1302,6 +1305,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (a['label'] == 'AI') {
                 Navigator.push(context, AppRouter.slide(
                   AiReportScreen(result: _result, profile: widget.profile),
+                ));
+                return;
+              }
+              if (a['label'] == '物件') {
+                Navigator.push(context, AppRouter.slide(
+                  WishlistScreen(result: _result, profile: widget.profile),
                 ));
                 return;
               }
