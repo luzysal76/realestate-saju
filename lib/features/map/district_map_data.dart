@@ -30,6 +30,55 @@ int calcDistrictScore(DistrictData d, String mainOe, String weakOe) {
   return score.clamp(25, 98);
 }
 
+// ─── 자치구 부가 데이터 (교통·편의·평균시세) ──────────
+class DistrictExtra {
+  final int transit;     // 교통 편의성 0~100
+  final int amenity;     // 생활 편의시설 0~100
+  final int avgPriceAk;  // 평균 시세 (억원)
+  const DistrictExtra(this.transit, this.amenity, this.avgPriceAk);
+}
+
+const districtExtras = <String, DistrictExtra>{
+  '강동구':    DistrictExtra(72, 70, 6),
+  '노원구':    DistrictExtra(70, 65, 4),
+  '도봉구':    DistrictExtra(65, 58, 3),
+  '양천구':    DistrictExtra(75, 75, 6),
+  '중랑구':    DistrictExtra(65, 62, 3),
+  '강남구':    DistrictExtra(95, 95, 12),
+  '서초구':    DistrictExtra(88, 90, 11),
+  '마포구':    DistrictExtra(88, 85, 7),
+  '용산구':    DistrictExtra(83, 83, 9),
+  '성동구':    DistrictExtra(80, 78, 8),
+  '송파구':    DistrictExtra(85, 85, 9),
+  '성북구':    DistrictExtra(70, 70, 5),
+  '서대문구':  DistrictExtra(73, 72, 5),
+  '관악구':    DistrictExtra(75, 70, 4),
+  '은평구':    DistrictExtra(65, 65, 4),
+  '영등포구':  DistrictExtra(88, 83, 6),
+  '중구':      DistrictExtra(93, 87, 8),
+  '강서구':    DistrictExtra(72, 70, 5),
+  '구로구':    DistrictExtra(75, 68, 4),
+  '동대문구':  DistrictExtra(78, 73, 5),
+  '강북구':    DistrictExtra(60, 58, 3),
+  '광진구':    DistrictExtra(75, 70, 6),
+  '동작구':    DistrictExtra(78, 72, 6),
+  '압구정·청담': DistrictExtra(80, 92, 22),
+  '종로구':    DistrictExtra(90, 85, 7),
+};
+
+// 예산 적합성 점수
+int calcBudgetScore(String districtName, int budgetAk) {
+  if (budgetAk == 0) return 50; // 무관
+  final extra = districtExtras[districtName];
+  if (extra == null) return 50;
+  final ratio = budgetAk / extra.avgPriceAk;
+  if (ratio >= 1.5) return 95;
+  if (ratio >= 1.0) return 80;
+  if (ratio >= 0.7) return 60;
+  if (ratio >= 0.5) return 40;
+  return 20;
+}
+
 // ─── 서울 25개 자치구 데이터 ───────────────────────────
 const seoulDistricts = [
   // 목(木) — 숲세권, 공원, 녹지

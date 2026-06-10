@@ -32,6 +32,9 @@ import '../map/seoul_top10_screen.dart';
 import '../simulator/moving_simulator_screen.dart';
 import '../../core/widgets/chart_widgets.dart';
 import '../../core/services/fortune_log_service.dart';
+import '../lifestyle/lifestyle_model.dart';
+import '../lifestyle/lifestyle_input_screen.dart';
+import '../lifestyle/lifestyle_result_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -1176,6 +1179,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
        'screen': MovingSimulatorScreen(result: _result, profile: widget.profile)},
       {'label': 'TOP', 'title': '서울 TOP 10', 'sub': '궁합 랭킹', 'isNew': true,
        'screen': SeoulTop10Screen(result: _result, profile: widget.profile)},
+      {'label': '生活', 'title': '생활패턴', 'sub': '맞춤 분석', 'isNew': true,
+       'screen': null}, // 동적 라우팅 (lifestyle 로드 필요)
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1191,8 +1196,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final idx = e.key;
           final a = e.value;
           return GestureDetector(
-            onTap: () {
+            onTap: () async {
               HapticFeedback.mediumImpact();
+              if (a['label'] == '生活') {
+                final lifestyle = await LifestyleProfile.load();
+                if (!context.mounted) return;
+                if (lifestyle.isConfigured) {
+                  Navigator.push(context, AppRouter.slide(
+                    LifestyleResultScreen(result: _result, profile: widget.profile, lifestyle: lifestyle),
+                  ));
+                } else {
+                  Navigator.push(context, AppRouter.slide(
+                    LifestyleInputScreen(result: _result, profile: widget.profile),
+                  ));
+                }
+                return;
+              }
               Navigator.push(context,
                 AppRouter.slide(a['screen'] as Widget));
             },
