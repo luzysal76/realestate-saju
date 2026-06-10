@@ -35,6 +35,8 @@ import '../../core/services/fortune_log_service.dart';
 import '../lifestyle/lifestyle_model.dart';
 import '../lifestyle/lifestyle_input_screen.dart';
 import '../lifestyle/lifestyle_result_screen.dart';
+import '../family/family_analysis_screen.dart';
+import '../ai_report/ai_report_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final SajuProfile profile;
@@ -165,10 +167,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildShinSalCard(),
               const SizedBox(height: 10),
               _buildQuickActions(context),
+              const SizedBox(height: 10),
+              _buildLifestyleBanner(context),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // ─── 생활패턴 요약 배너 ────────────────────────────
+  Widget _buildLifestyleBanner(BuildContext context) {
+    return FutureBuilder<LifestyleProfile>(
+      future: LifestyleProfile.load(),
+      builder: (ctx, snap) {
+        final lp = snap.data;
+        if (lp == null || !lp.isConfigured) {
+          return GestureDetector(
+            onTap: () => Navigator.push(context, AppRouter.slide(
+              LifestyleInputScreen(result: _result, profile: widget.profile))),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.accent.withOpacity(0.25),
+                    style: BorderStyle.solid),
+              ),
+              child: Row(children: [
+                ShaderMask(
+                  shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+                  child: const Text('生', style: TextStyle(fontFamily: 'NotoSerifKR',
+                      fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('생활패턴을 설정하면 더 정확한 동네 추천을 받을 수 있어요',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
+                ])),
+                const Icon(Icons.chevron_right, color: AppColors.accent, size: 18),
+              ]),
+            ),
+          );
+        }
+        return GestureDetector(
+          onTap: () async {
+            final lifestyle = await LifestyleProfile.load();
+            if (!context.mounted) return;
+            Navigator.push(context, AppRouter.slide(
+              LifestyleResultScreen(result: _result, profile: widget.profile, lifestyle: lifestyle)));
+          },
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+            ),
+            child: Row(children: [
+              ShaderMask(
+                shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+                child: const Text('生', style: TextStyle(fontFamily: 'NotoSerifKR',
+                    fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('생활패턴 맞춤 분석 설정됨',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
+                        color: AppColors.accent)),
+                const SizedBox(height: 2),
+                Text('예산 ${lp.budgetLabel}  ·  출근 ${lp.commuteDistrict}'
+                    '${lp.childrenCount > 0 ? '  ·  자녀 ${lp.childrenCount}명' : ''}'
+                    '${lp.hasPet ? '  ·  🐾' : ''}',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              ])),
+              const Icon(Icons.chevron_right, color: AppColors.accent, size: 18),
+            ]),
+          ),
+        );
+      },
     );
   }
 
@@ -1180,7 +1257,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       {'label': 'TOP', 'title': '서울 TOP 10', 'sub': '궁합 랭킹', 'isNew': true,
        'screen': SeoulTop10Screen(result: _result, profile: widget.profile)},
       {'label': '生活', 'title': '생활패턴', 'sub': '맞춤 분석', 'isNew': true,
-       'screen': null}, // 동적 라우팅 (lifestyle 로드 필요)
+       'screen': null}, // 동적 라우팅
+      {'label': '家族', 'title': '가족 분석', 'sub': '합산 동네', 'isNew': true,
+       'screen': null}, // 동적 라우팅
+      {'label': 'AI', 'title': 'AI 리포트', 'sub': '맞춤 설명', 'isNew': true,
+       'screen': null}, // 동적 라우팅
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1210,6 +1291,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     LifestyleInputScreen(result: _result, profile: widget.profile),
                   ));
                 }
+                return;
+              }
+              if (a['label'] == '家族') {
+                Navigator.push(context, AppRouter.slide(
+                  FamilyAnalysisScreen(currentProfile: widget.profile),
+                ));
+                return;
+              }
+              if (a['label'] == 'AI') {
+                Navigator.push(context, AppRouter.slide(
+                  AiReportScreen(result: _result, profile: widget.profile),
+                ));
                 return;
               }
               Navigator.push(context,
