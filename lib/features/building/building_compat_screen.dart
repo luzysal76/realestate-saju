@@ -1,9 +1,13 @@
+// building_compat_screen.dart — 건물 궁합 분석 + AI 심층 분석
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
+import '../../core/services/claude_api_service.dart';
 import '../../shared/models/saju_profile.dart';
+import '../../features/map/kakao_address_service.dart';
+import 'building_result_card.dart';
 
 class BuildingCompatScreen extends StatefulWidget {
   final SajuResult result;
@@ -15,15 +19,18 @@ class BuildingCompatScreen extends StatefulWidget {
   });
 
   @override
-  State<BuildingCompatScreen> createState() =>
-      _BuildingCompatScreenState();
+  State<BuildingCompatScreen> createState() => _BuildingCompatScreenState();
 }
 
 class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
   final _addrCtrl = TextEditingController();
   DateTime? _approvalDate;
-  _CompatResult? _compatResult;
+  BuildingCompatResult? _compatResult;
   bool _analyzed = false;
+
+  // AI 분석
+  String _aiAnalysis = '';
+  bool _aiLoading = false;
 
   @override
   void dispose() {
@@ -31,7 +38,7 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
     super.dispose();
   }
 
-  // ─── 분석 ────────────────────────────────────────
+  // ─── 사주 분석 ───────────────────────────────────────
 
   void _analyze() {
     if (_approvalDate == null) {
@@ -43,47 +50,33 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
     final bldGj = SajuCalculator.yearToGanJi(_approvalDate!.year);
     final bldCg = bldGj['cheongan']!;
     final bldJi = bldGj['jiji']!;
-
-    final result = _calcCompat(bldCg, bldJi);
     setState(() {
-      _compatResult = result;
+      _compatResult = _calcCompat(bldCg, bldJi);
       _analyzed = true;
+      _aiAnalysis = '';
     });
   }
 
-  _CompatResult _calcCompat(String bldCg, String bldJi) {
+  BuildingCompatResult _calcCompat(String bldCg, String bldJi) {
     final ilCg = widget.result.ilgan;
     final ilJi = widget.result.ilji;
-
-    // 천간 관계
     final cgRel = _cheonganRel(ilCg, bldCg);
-    // 지지 관계
     final jiRel = _jijiRel(ilJi, bldJi);
-    // 십성
     final ss = SajuCalculator.calcSipSeong(ilCg, bldCg);
-
-    // 점수 계산
-    int score = _baseScore(cgRel, jiRel, ss.name);
-
-    // 궁합 유형
-    final type = _compatType(score, ss.name, jiRel);
-    final advice = _advice(score, ss.name, jiRel, cgRel);
-    final title = _title(score);
-
-    return _CompatResult(
+    final score = _baseScore(cgRel, jiRel, ss.name);
+    return BuildingCompatResult(
       bldGanJi: '$bldCg$bldJi',
       sipseong: ss.name,
       cgRel: cgRel,
       jiRel: jiRel,
       score: score,
-      title: title,
-      type: type,
-      advice: advice,
+      title: _title(score),
+      type: _compatType(score, ss.name, jiRel),
+      advice: _advice(score, ss.name, jiRel, cgRel),
     );
   }
 
   String _cheonganRel(String il, String bld) {
-    // 천간합 (갑기 을경 병신 정임 무계)
     const cgHap = {
       '갑': '기', '기': '갑', '을': '경', '경': '을',
       '병': '신', '신': '병', '정': '임', '임': '정', '무': '계', '계': '무',
@@ -113,26 +106,20 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
 
   int _baseScore(String cgRel, String jiRel, String ss) {
     int s = 60;
-    // 천간 관계 보정
     if (cgRel == '천간합(合)') s += 20;
     else if (cgRel == '건물이 나를 생(生)') s += 15;
     else if (cgRel == '건물이 생(生)함') s += 10;
     else if (cgRel == '오행 일치') s += 8;
     else if (cgRel == '건물이 나를 극(剋)') s -= 15;
     else if (cgRel == '건물이 극받음(剋)') s += 5;
-
-    // 지지 관계 보정
     if (jiRel == '지지합(合)') s += 18;
     else if (jiRel == '지지 상생(生)') s += 12;
     else if (jiRel == '지지 동(同)') s += 8;
     else if (jiRel == '지지충(沖)') s -= 20;
     else if (jiRel == '지지 상극(剋)') s -= 10;
-
-    // 십성 보정
     if (const ['편재', '정재'].contains(ss)) s += 10;
     if (const ['정인', '편인'].contains(ss)) s += 8;
     if (const ['편관', '겁재'].contains(ss)) s -= 10;
-
     return s.clamp(20, 98);
   }
 
@@ -158,7 +145,6 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
 
   String _advice(int score, String ss, String jiRel, String cgRel) {
     final buf = StringBuffer();
-
     if (jiRel == '지지합(合)' || cgRel == '천간합(合)') {
       buf.write('건물의 기운이 귀하를 감싸 안아 안락한 거주가 예상됩니다. ');
     } else if (jiRel == '지지충(沖)') {
@@ -168,7 +154,6 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
     } else if (cgRel == '건물이 나를 극(剋)') {
       buf.write('건물의 기운이 다소 강하게 작용하여 주의가 필요합니다. ');
     }
-
     if (const ['편재', '정재'].contains(ss)) {
       buf.write('재물운을 높여주는 건물로 투자 가치가 높습니다. ');
     } else if (const ['정인', '편인'].contains(ss)) {
@@ -178,7 +163,6 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
     } else if (ss == '편관') {
       buf.write('강한 기운이 충돌할 수 있어 인테리어나 배치에 주의하세요. ');
     }
-
     if (score >= 72) {
       buf.write('입주 후 재물운과 건강운이 상승할 것으로 예상됩니다.');
     } else if (score >= 50) {
@@ -186,11 +170,116 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
     } else {
       buf.write('입주 전 전문 풍수 상담을 권장합니다.');
     }
-
     return buf.toString();
   }
 
-  // ─── UI ─────────────────────────────────────────
+  // ─── AI 분석 ─────────────────────────────────────────
+
+  Future<void> _runAiAnalysis() async {
+    if (_compatResult == null) return;
+    setState(() { _aiLoading = true; _aiAnalysis = ''; });
+    final text = await ClaudeApiService.generateBuildingAnalysis(
+      name: widget.profile.name,
+      ilgan: widget.result.ilgan,
+      ilji: widget.result.ilji,
+      mainOe: widget.result.mainOehaeng,
+      bldGanJi: _compatResult!.bldGanJi,
+      sipseong: _compatResult!.sipseong,
+      cgRel: _compatResult!.cgRel,
+      jiRel: _compatResult!.jiRel,
+      score: _compatResult!.score,
+      compatType: _compatResult!.type,
+      address: _addrCtrl.text.trim(),
+    );
+    if (mounted) setState(() { _aiAnalysis = text; _aiLoading = false; });
+  }
+
+  // ─── Kakao 주소 검색 ─────────────────────────────────
+
+  Future<void> _showAddressSearch() async {
+    if (!kakaoKeyConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('카카오 API 키를 설정하면 주소 자동완성이 활성화됩니다')),
+      );
+      return;
+    }
+    final query = ValueNotifier('');
+    final results = ValueNotifier<List<AddressResult>>([]);
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 16, right: 16, top: 16,
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('주소 검색', style: TextStyle(
+              fontFamily: 'NotoSerifKR', fontSize: 15,
+              color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          TextField(
+            autofocus: true,
+            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: '건물명 또는 주소 입력',
+              hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+              prefixIcon: const Icon(Icons.search, color: AppColors.accent, size: 18),
+              filled: true, fillColor: AppColors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.divider, width: 0.5)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.divider, width: 0.5)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.accent.withOpacity(0.6))),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onChanged: (v) async {
+              query.value = v;
+              if (v.length >= 2) {
+                results.value = await searchKakaoAddress(v);
+              } else {
+                results.value = [];
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+          ValueListenableBuilder<List<AddressResult>>(
+            valueListenable: results,
+            builder: (_, list, __) => SizedBox(
+              height: list.isEmpty ? 0 : (list.length * 56.0).clamp(0, 224),
+              child: ListView.separated(
+                itemCount: list.length,
+                separatorBuilder: (_, __) => Divider(
+                    height: 0.5, color: AppColors.divider.withOpacity(0.5)),
+                itemBuilder: (_, i) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.location_on_outlined,
+                      color: AppColors.accent, size: 16),
+                  title: Text(list[i].name,
+                      style: const TextStyle(
+                          fontSize: 13, color: AppColors.textPrimary)),
+                  subtitle: Text(list[i].address,
+                      style: const TextStyle(
+                          fontSize: 10, color: AppColors.textSecondary)),
+                  onTap: () {
+                    _addrCtrl.text = list[i].address;
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ]),
+      ),
+    );
+  }
+
+  // ─── UI ─────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -200,11 +289,8 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
         title: ShaderMask(
           shaderCallback: (b) => AppColors.goldGradient.createShader(b),
           child: const Text('건물 궁합',
-              style: TextStyle(
-                  fontFamily: 'NotoSerifKR',
-                  fontSize: 18,
-                  color: Colors.white,
-                  letterSpacing: 3)),
+              style: TextStyle(fontFamily: 'NotoSerifKR',
+                  fontSize: 18, color: Colors.white, letterSpacing: 3)),
         ),
       ),
       body: ListView(
@@ -212,11 +298,15 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
         children: [
           _buildInputCard().animate().fadeIn(),
           const SizedBox(height: 12),
-          if (_analyzed && _compatResult != null)
-            _buildResultCard(_compatResult!)
-                .animate()
-                .fadeIn(delay: 100.ms)
-                .slideY(begin: 0.1),
+          if (_analyzed && _compatResult != null) ...[
+            BuildingResultCard(
+              result: _compatResult!,
+              ilgan: widget.result.ilgan,
+              ilji: widget.result.ilji,
+            ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
+            const SizedBox(height: 12),
+            _buildAiCard().animate().fadeIn(delay: 200.ms),
+          ],
         ],
       ),
     );
@@ -232,33 +322,43 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
         ),
         const SizedBox(height: 14),
 
-        // 주소 입력
-        TextField(
-          controller: _addrCtrl,
-          style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: '예) 서울시 강남구 역삼동 000-00',
-            hintStyle: const TextStyle(
-                fontSize: 12, color: AppColors.textMuted),
-            prefixIcon: const Icon(Icons.location_on_outlined,
-                color: AppColors.textSecondary, size: 18),
-            filled: true,
-            fillColor: AppColors.surface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: AppColors.divider, width: 0.5),
+        // 주소 입력 + 검색 버튼
+        Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _addrCtrl,
+              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: '예) 서울시 강남구 역삼동 000-00',
+                hintStyle: const TextStyle(
+                    fontSize: 12, color: AppColors.textMuted),
+                prefixIcon: const Icon(Icons.location_on_outlined,
+                    color: AppColors.textSecondary, size: 18),
+                filled: true, fillColor: AppColors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: AppColors.divider, width: 0.5)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: AppColors.divider, width: 0.5)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: AppColors.accent.withOpacity(0.6))),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: AppColors.divider, width: 0.5),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: AppColors.accent.withOpacity(0.6)),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
-        ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _showAddressSearch,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+              decoration: BoxDecoration(
+                color: AppColors.accent.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.accent.withOpacity(0.4)),
+              ),
+              child: const Icon(Icons.search, color: AppColors.accent, size: 18),
+            ),
+          ),
+        ]),
         const SizedBox(height: 10),
 
         // 준공일 선택
@@ -271,8 +371,7 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: _approvalDate != null
-                    ? AppColors.accent.withOpacity(0.6)
-                    : AppColors.divider,
+                    ? AppColors.accent.withOpacity(0.6) : AppColors.divider,
                 width: _approvalDate != null ? 1 : 0.5,
               ),
             ),
@@ -284,34 +383,27 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
                 _approvalDate != null
                     ? '준공일: ${_approvalDate!.year}년 ${_approvalDate!.month}월 ${_approvalDate!.day}일'
                     : '준공일(사용승인일) 선택 ← 탭하여 입력',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _approvalDate != null
-                      ? AppColors.textPrimary
-                      : AppColors.textMuted,
-                ),
+                style: TextStyle(fontSize: 13,
+                    color: _approvalDate != null
+                        ? AppColors.textPrimary : AppColors.textMuted),
               ),
               const Spacer(),
               if (_approvalDate != null)
                 Text(
                   SajuCalculator.yearToGanJi(_approvalDate!.year)['cheongan']! +
                       SajuCalculator.yearToGanJi(_approvalDate!.year)['jiji']!,
-                  style: const TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 13,
-                      color: AppColors.accent,
+                  style: const TextStyle(fontFamily: 'NotoSerifKR',
+                      fontSize: 13, color: AppColors.accent,
                       fontWeight: FontWeight.bold),
                 ),
             ]),
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          '※ 등기부등본 또는 건축물대장의 "사용승인일"을 입력하세요',
-          style: TextStyle(fontSize: 10, color: AppColors.textMuted),
-        ),
-
+        const Text('※ 등기부등본 또는 건축물대장의 "사용승인일"을 입력하세요',
+            style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
         const SizedBox(height: 16),
+
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -326,11 +418,8 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
             child: ShaderMask(
               shaderCallback: (b) => AppColors.goldGradient.createShader(b),
               child: const Text('건물 궁합 분석',
-                  style: TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 15,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
+                  style: TextStyle(fontFamily: 'NotoSerifKR', fontSize: 15,
+                      color: Colors.white, letterSpacing: 1.5,
                       fontWeight: FontWeight.bold)),
             ),
           ),
@@ -343,16 +432,13 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime(2000, 1, 1),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
+      firstDate: DateTime(1950), lastDate: DateTime.now(),
       helpText: '준공일(사용승인일) 선택',
       builder: (ctx, child) => Theme(
         data: ThemeData.dark().copyWith(
           colorScheme: const ColorScheme.dark(
             primary: AppColors.accent,
-            onSurface: AppColors.textPrimary,
-            surface: AppColors.cardBg,
-          ),
+            onSurface: AppColors.textPrimary, surface: AppColors.cardBg),
         ),
         child: child!,
       ),
@@ -360,236 +446,92 @@ class _BuildingCompatScreenState extends State<BuildingCompatScreen> {
     if (picked != null) setState(() => _approvalDate = picked);
   }
 
-  Widget _buildResultCard(_CompatResult r) {
-    final color = _scoreColorFor(r.score);
-    return TraditionalCard(
-      doubleBorder: true,
-      borderColor: color.withOpacity(0.5),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // 헤더
-        Row(children: [
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            ShaderMask(
-              shaderCallback: (b) => AppColors.goldGradient.createShader(b),
-              child: Text(r.title,
-                  style: const TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.5)),
-            ),
-            const SizedBox(height: 3),
-            Text(r.type,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: color,
-                    fontWeight: FontWeight.bold)),
-          ]),
-          const Spacer(),
-          Container(
-            width: 60, height: 60,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              shape: BoxShape.circle,
-              border: Border.all(color: color.withOpacity(0.4), width: 2),
-              boxShadow: [
-                BoxShadow(color: color.withOpacity(0.25), blurRadius: 10)
-              ],
-            ),
-            child: Center(
-              child: Text('${r.score}',
-                  style: TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: color)),
-            ),
-          ),
-        ]),
-        const SizedBox(height: 12),
-        Container(
-          height: 1,
-          decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: [color.withOpacity(0.5), Colors.transparent])),
-        ),
-        const SizedBox(height: 12),
-
-        // 비교 박스
-        Row(children: [
-          Expanded(child: _ganjiBox(
-              '나의 일주',
-              '${widget.result.ilgan}${widget.result.ilji}',
-              AppColors.accent)),
-          const SizedBox(width: 10),
-          Expanded(child: _ganjiBox(
-              '건물 년주',
-              r.bldGanJi,
-              color)),
-        ]),
-        const SizedBox(height: 10),
-
-        // 관계 칩
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          _chip(r.sipseong, color),
-          _chip(r.cgRel, AppColors.accent.withOpacity(0.8)),
-          _chip(r.jiRel, _jijiRelColor(r.jiRel)),
-        ]),
-        const SizedBox(height: 12),
-
-        // 점수 바
-        Row(children: [
-          const Text('궁합 점수',
-              style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.3)),
-          const SizedBox(width: 10),
-          Expanded(child: KoreanProgressBar(
-              value: r.score / 100, color: color, height: 10)),
-          const SizedBox(width: 8),
-          Text('${r.score}점',
-              style: TextStyle(
-                  fontFamily: 'NotoSerifKR',
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
-        ]),
-        const SizedBox(height: 14),
-
-        // 어드바이스
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.surface.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-                color: color.withOpacity(0.2), width: 0.8),
-          ),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('💬 ', style: TextStyle(fontSize: 13)),
-            Expanded(
-              child: Text(r.advice,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textPrimary,
-                      height: 1.65)),
-            ),
-          ]),
-        ),
-
-        // 추가 팁
-        const SizedBox(height: 10),
-        _buildTipBox(r),
-      ]),
-    );
-  }
-
-  Widget _ganjiBox(String label, String ganji, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 10, color: AppColors.textSecondary)),
-        const SizedBox(height: 4),
-        Text(ganji,
-            style: TextStyle(
-                fontFamily: 'NotoSerifKR',
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: color)),
-      ]),
-    );
-  }
-
-  Widget _buildTipBox(_CompatResult r) {
-    final tips = <String>[];
-    if (r.jiRel == '지지충(沖)') tips.add('인테리어 소품에 나무(木) 오행 색상(초록·청색)을 더하면 충기를 완화할 수 있습니다.');
-    if (r.score < 55) tips.add('현관 방향에 좋아하는 오행의 소품을 배치해 비보(裨補)하면 운세가 향상됩니다.');
-    if (r.score >= 75) tips.add('이 건물과 오래 함께 할수록 인연이 깊어지는 상생 궁합입니다. 장기 보유를 추천합니다.');
-
-    if (tips.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg2,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: AppColors.divider.withOpacity(0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: tips.map((t) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('💡 ', style: TextStyle(fontSize: 11)),
-            Expanded(child: Text(t,
-                style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    height: 1.5))),
-          ]),
-        )).toList(),
-      ),
-    );
-  }
-
-  Widget _chip(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+  Widget _buildAiCard() {
+    if (!claudeApiConfigured) {
+      return Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color.withOpacity(0.35)),
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.divider.withOpacity(0.5)),
         ),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 10,
-                color: color,
-                fontWeight: FontWeight.bold)),
+        child: Row(children: [
+          const Text('🤖', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('AI 심층 분석',
+                style: TextStyle(fontFamily: 'NotoSerifKR',
+                    fontSize: 13, fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary)),
+            const SizedBox(height: 2),
+            const Text('Claude API 키 설정 시 사용 가능합니다',
+                style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+          ])),
+        ]),
       );
+    }
 
-  Color _scoreColorFor(int score) {
-    if (score >= 80) return const Color(0xFFCC3300);
-    if (score >= 65) return AppColors.accent;
-    if (score >= 50) return AppColors.mokColor;
-    return AppColors.textSecondary;
+    return TraditionalCard(
+      borderColor: AppColors.accent.withOpacity(0.3),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('🤖', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          ShaderMask(
+            shaderCallback: (b) => AppColors.goldGradient.createShader(b),
+            child: const Text('AI 심층 분석',
+                style: TextStyle(fontFamily: 'NotoSerifKR',
+                    fontSize: 14, fontWeight: FontWeight.bold,
+                    color: Colors.white, letterSpacing: 0.5)),
+          ),
+          const Spacer(),
+          if (!_aiLoading && _aiAnalysis.isEmpty)
+            GestureDetector(
+              onTap: _runAiAnalysis,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFC9A84C), Color(0xFFE8D08A)]),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('분석 시작',
+                    style: TextStyle(fontSize: 12, color: Colors.black,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
+        ]),
+        if (_aiLoading) ...[
+          const SizedBox(height: 12),
+          const Center(child: CircularProgressIndicator(
+              color: AppColors.accent, strokeWidth: 2)),
+          const SizedBox(height: 8),
+          const Center(child: Text('AI가 분석 중입니다...',
+              style: TextStyle(fontSize: 11, color: AppColors.textMuted))),
+        ],
+        if (_aiAnalysis.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surface.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+            ),
+            child: Text(_aiAnalysis,
+                style: const TextStyle(fontSize: 12.5,
+                    color: AppColors.textPrimary, height: 1.7)),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: _runAiAnalysis,
+              child: const Text('↻ 재분석',
+                  style: TextStyle(fontSize: 10, color: AppColors.accent)),
+            ),
+          ),
+        ],
+      ]),
+    );
   }
-
-  Color _jijiRelColor(String rel) {
-    if (rel.contains('합')) return AppColors.mokColor;
-    if (rel.contains('충')) return AppColors.hwaColor;
-    if (rel.contains('생')) return AppColors.suColor;
-    return AppColors.textSecondary;
-  }
-}
-
-// ─── 결과 데이터 클래스 ──────────────────────────
-
-class _CompatResult {
-  final String bldGanJi;
-  final String sipseong;
-  final String cgRel;
-  final String jiRel;
-  final int score;
-  final String title;
-  final String type;
-  final String advice;
-
-  const _CompatResult({
-    required this.bldGanJi,
-    required this.sipseong,
-    required this.cgRel,
-    required this.jiRel,
-    required this.score,
-    required this.title,
-    required this.type,
-    required this.advice,
-  });
 }
