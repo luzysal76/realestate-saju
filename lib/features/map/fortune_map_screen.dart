@@ -1,20 +1,18 @@
+// fortune_map_screen.dart — 서울 자치구 오행 히트맵
+// 목록(그리드) ↔ 지도(flutter_map) 토글
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/korean_decorations.dart';
 import '../../core/saju/saju_calculator.dart';
 import '../../shared/models/saju_profile.dart';
+import 'district_map_data.dart';
+import 'real_map_view.dart';
 
-/// 서울 자치구 오행 히트맵
-/// 각 자치구를 오행으로 분류 → 사용자 오행 점수 기반 히트맵 표시
 class FortuneMapScreen extends StatefulWidget {
   final SajuResult result;
   final SajuProfile profile;
-  const FortuneMapScreen({
-    super.key,
-    required this.result,
-    required this.profile,
-  });
+  const FortuneMapScreen({super.key, required this.result, required this.profile});
 
   @override
   State<FortuneMapScreen> createState() => _FortuneMapScreenState();
@@ -22,70 +20,18 @@ class FortuneMapScreen extends StatefulWidget {
 
 class _FortuneMapScreenState extends State<FortuneMapScreen> {
   String _selectedFilter = '전체';
-  _DistrictDetail? _selectedDistrict;
+  DistrictData? _selectedDistrict;
+  bool _mapMode = false; // false=목록, true=지도
 
   static const _filters = ['전체', '목(木)', '화(火)', '토(土)', '금(金)', '수(水)'];
 
-  // ─── 자치구 오행 데이터 ──────────────────────────
+  int _score(DistrictData d) =>
+      calcDistrictScore(d, widget.result.mainOehaeng, widget.result.weakOehaeng);
 
-  static const _districts = [
-    // 목(木) — 숲세권, 공원, 녹지 중심
-    _DistrictData('강동구', '목', '어린이대공원·천호공원', '🌳', '도시숲·생태공원 풍부'),
-    _DistrictData('노원구', '목', '불암산·수락산 인근', '🌿', '자연환경 우수, 주거 쾌적'),
-    _DistrictData('도봉구', '목', '북한산·도봉산', '🏔️', '청정 자연, 에너지 맑음'),
-    _DistrictData('양천구', '목', '목동·안양천 인근', '🌱', '학군+녹지 결합'),
-    _DistrictData('중랑구', '목', '용마산·망우산', '🍃', '조용한 주거지, 산록 기운'),
-
-    // 화(火) — 학군지, 번화가, 남향, 상권
-    _DistrictData('강남구', '화', '대치동 학군·강남역', '🔥', '최상위 학군, 역동적 기운'),
-    _DistrictData('서초구', '화', '반포·교육타운', '⭐', '안정적 학군, 남향 단지'),
-    _DistrictData('마포구', '화', '홍대·망원·상암', '✨', '문화·상권 활발, 젊은 기운'),
-    _DistrictData('용산구', '화', '이태원·한남·미군기지', '🌟', '국제적 분위기, 고급화'),
-    _DistrictData('성동구', '화', '왕십리·성수 핫플', '🔆', '재개발+상권 활성'),
-
-    // 토(土) — 평지, 신도시, 중심부, 안정
-    _DistrictData('송파구', '토', '잠실·올림픽공원', '🏙️', '균형잡힌 주거·상권'),
-    _DistrictData('성북구', '토', '길음·석관·장위', '🏘️', '재개발 활발, 안정 기운'),
-    _DistrictData('서대문구', '토', '신촌·홍은·은평', '🏫', '교육·주거 균형'),
-    _DistrictData('관악구', '토', '신림·봉천·서울대', '📚', '교육 기운 강함'),
-    _DistrictData('은평구', '토', '불광·녹번·역촌', '🏡', '평온한 주거, 안정 기운'),
-
-    // 금(金) — 금융, 고층, 비즈니스
-    _DistrictData('영등포구', '금', '여의도 금융타운', '💎', '국내 금융 1번지'),
-    _DistrictData('중구', '금', '명동·을지로·종로', '💰', '역사+금융 중심부'),
-    _DistrictData('강서구', '금', '마곡산업단지', '⚙️', '첨단산업 기운, 성장세'),
-    _DistrictData('구로구', '금', '구로디지털단지', '🔩', '산업·IT 기운'),
-    _DistrictData('동대문구', '금', '청량리·회기 개발', '🏗️', '재개발 집중, 변화 기운'),
-
-    // 수(水) — 수변, 한강, 흐름
-    _DistrictData('강북구', '수', '북한강 수변·우이천', '💧', '자연 수계 풍부'),
-    _DistrictData('광진구', '수', '한강변·자양·건대', '🌊', '한강 조망 우수'),
-    _DistrictData('동작구', '수', '반포·흑석 한강변', '🏞️', '한강 접근성 최고'),
-    _DistrictData('강남구(한강)', '수', '압구정·청담 한강뷰', '🌉', '최고급 수변 라이프'),
-    _DistrictData('종로구', '수', '청계천·경복궁 수계', '💦', '역사적 수기 흐름'),
-  ];
-
-  // ─── 점수 계산 ────────────────────────────────────
-
-  int _districtScore(_DistrictData d) {
-    final myMain = widget.result.mainOehaeng;
-    final myWeak = widget.result.weakOehaeng;
-    // 보완 오행 (약한 오행을 보완하는 것)
-    final supplement = SajuCalculator.saeng[myWeak] ?? '';
-
-    int score = 50;
-    if (d.oehaeng == myMain) score += 25; // 주 오행 일치
-    else if (d.oehaeng == supplement) score += 20; // 보완 오행
-    else if (SajuCalculator.saeng[myMain] == d.oehaeng) score += 15;
-    else if (SajuCalculator.geuk[myMain] == d.oehaeng) score -= 10;
-
-    return score.clamp(25, 98);
-  }
-
-  List<_DistrictData> get _filtered {
-    if (_selectedFilter == '전체') return _districts;
+  List<DistrictData> get _filtered {
+    if (_selectedFilter == '전체') return seoulDistricts;
     final oe = _selectedFilter.replaceAll(RegExp(r'\(.+\)'), '').trim();
-    return _districts.where((d) => d.oehaeng == oe).toList();
+    return seoulDistricts.where((d) => d.oehaeng == oe).toList();
   }
 
   Color _oeColor(String oe) {
@@ -99,13 +45,8 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
     }
   }
 
-  // ─── UI ─────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    final sorted = [..._filtered]
-      ..sort((a, b) => _districtScore(b).compareTo(_districtScore(a)));
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -118,27 +59,37 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
                   color: Colors.white,
                   letterSpacing: 3)),
         ),
+        actions: [
+          // 목록 ↔ 지도 토글
+          Container(
+            margin: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg2,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              _ModeTab(label: '목록', icon: Icons.grid_view_rounded,
+                  active: !_mapMode, onTap: () => setState(() => _mapMode = false)),
+              _ModeTab(label: '지도', icon: Icons.map_rounded,
+                  active: _mapMode, onTap: () => setState(() => _mapMode = true)),
+            ]),
+          ),
+        ],
       ),
       body: Column(children: [
         _buildProfileChip(),
-        _buildFilterBar(),
+        if (!_mapMode) _buildFilterBar(),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-            children: [
-              _buildHeatGrid(sorted),
-              const SizedBox(height: 14),
-              if (_selectedDistrict != null)
-                _buildDetailCard(_selectedDistrict!).animate().fadeIn(duration: 250.ms),
-              const SizedBox(height: 10),
-              _buildOehaengGuide(),
-            ],
-          ),
+          child: _mapMode
+              ? RealMapView(result: widget.result, profile: widget.profile)
+              : _buildGridView(),
         ),
       ]),
     );
   }
 
+  // ─── 프로필 칩 ─────────────────────────────────────
   Widget _buildProfileChip() {
     final oe = widget.result.mainOehaeng;
     final color = _oeColor(oe);
@@ -157,8 +108,7 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
                 fontWeight: FontWeight.bold,
                 color: color)),
         const Spacer(),
-        Text('보완 오행: ',
-            style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text('보완: ', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
         Text(widget.result.weakOehaeng,
             style: TextStyle(
                 fontFamily: 'NotoSerifKR',
@@ -168,6 +118,7 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
     );
   }
 
+  // ─── 필터 바 ───────────────────────────────────────
   Widget _buildFilterBar() {
     return Container(
       height: 38,
@@ -206,7 +157,25 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
     );
   }
 
-  Widget _buildHeatGrid(List<_DistrictData> items) {
+  // ─── 그리드 뷰 ─────────────────────────────────────
+  Widget _buildGridView() {
+    final sorted = [..._filtered]
+      ..sort((a, b) => _score(b).compareTo(_score(a)));
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+      children: [
+        _buildHeatGrid(sorted),
+        const SizedBox(height: 14),
+        if (_selectedDistrict != null)
+          _buildDetailCard(_selectedDistrict!).animate().fadeIn(duration: 250.ms),
+        const SizedBox(height: 10),
+        _buildOehaengGuide(),
+      ],
+    );
+  }
+
+  Widget _buildHeatGrid(List<DistrictData> items) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -215,24 +184,20 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
       itemCount: items.length,
       itemBuilder: (ctx, i) {
         final d = items[i];
-        final score = _districtScore(d);
+        final score = _score(d);
         final oeColor = _oeColor(d.oehaeng);
         final heat = score / 100;
-        final isSelected = _selectedDistrict?.data.name == d.name;
+        final isSelected = _selectedDistrict?.name == d.name;
         return GestureDetector(
           onTap: () => setState(() {
-            _selectedDistrict = _selectedDistrict?.data.name == d.name
-                ? null
-                : _DistrictDetail(data: d, score: score);
+            _selectedDistrict = _selectedDistrict?.name == d.name ? null : d;
           }),
           child: Container(
             decoration: BoxDecoration(
               color: oeColor.withOpacity(0.05 + heat * 0.3),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected
-                    ? oeColor
-                    : oeColor.withOpacity(0.3 + heat * 0.3),
+                color: isSelected ? oeColor : oeColor.withOpacity(0.3 + heat * 0.3),
                 width: isSelected ? 1.8 : 0.8,
               ),
               boxShadow: score >= 75
@@ -243,10 +208,7 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
               Positioned(
                 top: 4, right: 5,
                 child: Text('$score',
-                    style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: oeColor)),
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: oeColor)),
               ),
               Center(
                 child: Column(
@@ -255,17 +217,13 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
                     Text(d.emoji, style: const TextStyle(fontSize: 16)),
                     const SizedBox(height: 2),
                     Text(
-                      d.name.replaceAll('(한강)', ''),
+                      d.name.replaceAll('·청담', '').replaceAll('압구정', '압구정'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: oeColor),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: oeColor),
                     ),
                     Text(d.oehaeng,
                         style: TextStyle(
-                            fontFamily: 'NotoSerifKR',
-                            fontSize: 8,
+                            fontFamily: 'NotoSerifKR', fontSize: 8,
                             color: oeColor.withOpacity(0.7))),
                   ],
                 ),
@@ -277,10 +235,9 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
     );
   }
 
-  Widget _buildDetailCard(_DistrictDetail detail) {
-    final d = detail.data;
+  Widget _buildDetailCard(DistrictData d) {
     final oeColor = _oeColor(d.oehaeng);
-    final score = detail.score;
+    final score = _score(d);
     final scoreColor = score >= 80 ? const Color(0xFFCC3300)
         : score >= 65 ? AppColors.accent
         : score >= 50 ? AppColors.mokColor
@@ -297,12 +254,10 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
               shaderCallback: (b) => AppColors.goldGradient.createShader(b),
               child: Text(d.name,
                   style: const TextStyle(
-                      fontFamily: 'NotoSerifKR',
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white)),
+                      fontFamily: 'NotoSerifKR', fontSize: 15,
+                      fontWeight: FontWeight.bold, color: Colors.white)),
             ),
-            Text('${d.oehaeng}(${_oeHanja(d.oehaeng)}) 기운  ·  ${d.keyword}',
+            Text('${d.oehaeng}(${_oeHanja(d.oehaeng)}) · ${d.keyword}',
                 style: TextStyle(fontSize: 11, color: oeColor)),
           ])),
           Container(
@@ -314,40 +269,30 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
             ),
             child: Text('$score점',
                 style: TextStyle(
-                    fontFamily: 'NotoSerifKR',
-                    color: scoreColor,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold)),
+                    fontFamily: 'NotoSerifKR', color: scoreColor,
+                    fontSize: 15, fontWeight: FontWeight.bold)),
           ),
         ]),
         const SizedBox(height: 10),
-        Row(children: [
-          const SizedBox(width: 5),
-          Expanded(child: KoreanProgressBar(value: score / 100, color: scoreColor, height: 8)),
-        ]),
+        KoreanProgressBar(value: score / 100, color: scoreColor, height: 8),
         const SizedBox(height: 10),
         Text(d.description,
-            style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textPrimary,
-                height: 1.6)),
+            style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, height: 1.6)),
         const SizedBox(height: 8),
         Text(_compatAdvice(d.oehaeng, score),
-            style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-                height: 1.5)),
+            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.5)),
       ]),
     );
   }
 
   String _compatAdvice(String distOe, int score) {
     final myOe = widget.result.mainOehaeng;
-    if (distOe == myOe) return '✅ 귀하의 주 오행($myOe)과 일치 — 에너지가 강하게 시너지를 냅니다.';
-    if (SajuCalculator.saeng[myOe] == distOe) return '⭐ 귀하의 오행을 생조(生助)하는 지역 — 성장·발전 기운이 있습니다.';
-    if (SajuCalculator.saeng[widget.result.weakOehaeng] == distOe) return '🔷 약한 오행(${ widget.result.weakOehaeng})을 보완 — 결핍을 채워주는 균형 있는 지역입니다.';
+    if (distOe == myOe) return '✅ 주 오행($myOe)과 일치 — 에너지가 강하게 시너지를 냅니다.';
+    if (SajuCalculator.saeng[myOe] == distOe) return '⭐ 귀하의 오행을 생조(生助) — 성장·발전 기운이 있습니다.';
+    if (SajuCalculator.saeng[widget.result.weakOehaeng] == distOe)
+      return '🔷 약한 오행(${widget.result.weakOehaeng})을 보완 — 균형 있는 지역입니다.';
     if (SajuCalculator.geuk[myOe] == distOe) return '⚠️ 주 오행과 상극 관계 — 장기 거주보다 단기 활용이 적합합니다.';
-    return '🔹 중립적인 기운 — 입주 후 인테리어로 운세를 조율할 수 있습니다.';
+    return '🔹 중립적인 기운 — 인테리어로 운세를 조율할 수 있습니다.';
   }
 
   Widget _buildOehaengGuide() {
@@ -370,17 +315,13 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(t.$1,
                 style: const TextStyle(
-                    fontFamily: 'NotoSerifKR',
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    fontFamily: 'NotoSerifKR', fontSize: 11,
+                    fontWeight: FontWeight.bold, color: AppColors.textPrimary,
                     letterSpacing: 0.3)),
             const SizedBox(width: 6),
             Expanded(child: Text(t.$2,
                 style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    height: 1.5))),
+                    fontSize: 11, color: AppColors.textSecondary, height: 1.5))),
           ]),
         )),
       ]),
@@ -393,21 +334,39 @@ class _FortuneMapScreenState extends State<FortuneMapScreen> {
   }
 }
 
-// ─── 데이터 클래스 ──────────────────────────────
+// ─── 모드 탭 버튼 ──────────────────────────────────────
+class _ModeTab extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
 
-class _DistrictData {
-  final String name;
-  final String oehaeng;
-  final String keyword;
-  final String emoji;
-  final String description;
+  const _ModeTab({
+    required this.label, required this.icon,
+    required this.active, required this.onTap,
+  });
 
-  const _DistrictData(
-      this.name, this.oehaeng, this.keyword, this.emoji, this.description);
-}
-
-class _DistrictDetail {
-  final _DistrictData data;
-  final int score;
-  const _DistrictDetail({required this.data, required this.score});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: active ? AppColors.accent.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: active ? AppColors.accent : AppColors.textSecondary),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: active ? AppColors.accent : AppColors.textSecondary,
+                  fontWeight: active ? FontWeight.bold : FontWeight.normal)),
+        ]),
+      ),
+    );
+  }
 }
